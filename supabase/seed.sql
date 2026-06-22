@@ -1,0 +1,6 @@
+-- Seed some jobs
+INSERT INTO jobs (id, title, company, location, remote, url, description, salary_range, tags, posted_date, source, source_id)
+VALUES
+  ('a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', 'Senior Frontend Engineer', 'Vercel', 'Remote, US', true, 'https://vercel.com/careers', 'We are looking for a Senior Frontend Engineer with deep expertise in React, Next.js, and Tailwind CSS to build outstanding developer tools.', '$140,000 - $180,000', ARRAY['React', 'Next.js', 'Tailwind', 'TypeScript'], now() - interval '2 days', 'remotive', 'vercel-senior-frontend'),
+  ('b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e', 'React Developer', 'Supabase', 'Remote, Singapore', true, 'https://supabase.com/careers', 'Looking for a React Developer to join our dashboard team. Experience with PostgreSQL and state management is a plus.', '$100,000 - $130,000', ARRAY['React', 'PostgreSQL', 'TypeScript', 'Zustand'], now() - interval '4 days', 'adzuna', 'supabase-react-dev'),
+  ('c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f', 'Full-stack Engineer', 'Linear', 'Remote, EU', true, 'https://linear.app/careers', 'Join our team to build the future of software development tracking tools. Strong engineering fundamentals and UI polish required.', '$120,000 - $160,000', ARRAY['React', 'TypeScript', 'Node.js', 'GraphQL'], now() - interval '1 day', 'jsearch', 'linear-fullstack');
