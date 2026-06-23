@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, Suspense } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useProfile } from "@/hooks/useProfile"
 import { Loader2, Check, AlertTriangle, Mail } from "lucide-react"
@@ -202,7 +202,9 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-5">
-          <BillingPanel />
+          <Suspense fallback={null}>
+            <BillingPanel />
+          </Suspense>
 
           <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
             <div>

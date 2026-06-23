@@ -9,7 +9,7 @@ import type { Plan } from "@/types"
 
 interface UsageData {
   plan: Plan
-  limits: { smart_apply: number; tailor: number; interview: number }
+  limits: { smart_apply: number | null; tailor: number | null; interview: number | null }
   used: { smart_apply: number; tailor: number; interview: number }
 }
 
@@ -103,14 +103,15 @@ export function BillingPanel() {
   )
 }
 
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const pct = limit > 0 && isFinite(limit) ? Math.min(100, (used / limit) * 100) : 0
-  const atLimit = used >= limit
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number | null }) {
+  const unlimited = limit === null
+  const pct = !unlimited && limit > 0 ? Math.min(100, (used / limit) * 100) : 0
+  const atLimit = !unlimited && used >= limit
   return (
     <div>
       <div className="flex justify-between text-[11px] mb-1">
         <span className="text-gray-500">{label}</span>
-        <span className={atLimit ? "text-red-600 font-medium" : "text-gray-400"}>{used}/{isFinite(limit) ? limit : "∞"}</span>
+        <span className={atLimit ? "text-red-600 font-medium" : "text-gray-400"}>{used}/{unlimited ? "∞" : limit}</span>
       </div>
       <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
         <div className={`h-full rounded-full ${atLimit ? "bg-red-400" : "bg-gray-900"}`} style={{ width: `${pct}%` }} />

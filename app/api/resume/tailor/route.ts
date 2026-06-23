@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { generateTailoredResume } from "@/lib/agents/resumeAgent"
-import { gateAction, logUsage } from "@/lib/usage"
+import { gateAction, refundUsage } from "@/lib/usage"
 
 export async function POST(request: Request) {
+  let consumedUserId: string | null = null
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -21,11 +22,12 @@ export async function POST(request: Request) {
     if (!gate.allowed) {
       return NextResponse.json({ error: gate.message, upgrade: true }, { status: 402 })
     }
+    consumedUserId = user.id
 
     const resumeJson = await generateTailoredResume(user.id, job_id)
-    await logUsage(user.id, "tailor")
     return NextResponse.json({ resume_json: resumeJson })
   } catch (err: unknown) {
+    if (consumedUserId) await refundUsage(consumedUserId, "tailor")
     console.error("Error tailoring resume:", err)
     const errMsg = err instanceof Error ? err.message : "Failed to tailor resume"
     return NextResponse.json({ error: errMsg }, { status: 500 })

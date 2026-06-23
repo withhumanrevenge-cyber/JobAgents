@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 import { createClient, createServiceClient } from "@/lib/supabase/server"
 import { generateInterviewQuestions } from "@/lib/agents/interviewAgent"
-import { gateAction, logUsage } from "@/lib/usage"
+import { gateAction, refundUsage } from "@/lib/usage"
 import { ParsedResume } from "@/types"
 
 export async function POST(request: Request) {
+  let consumedUserId: string | null = null
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -17,11 +18,6 @@ export async function POST(request: Request) {
 
     if (!match_id && !job_id) {
       return NextResponse.json({ error: "match_id or job_id is required." }, { status: 400 })
-    }
-
-    const gate = await gateAction(user.id, "interview")
-    if (!gate.allowed) {
-      return NextResponse.json({ error: gate.message, upgrade: true }, { status: 402 })
     }
 
     const service = createServiceClient()
@@ -46,6 +42,13 @@ export async function POST(request: Request) {
 
     const parsedResume: ParsedResume | null = profile?.parsed_resume ?? null
 
+    // Consume quota right before the paid work, so validation failures above never cost the user.
+    const gate = await gateAction(user.id, "interview")
+    if (!gate.allowed) {
+      return NextResponse.json({ error: gate.message, upgrade: true }, { status: 402 })
+    }
+    consumedUserId = user.id
+
     const questions = await generateInterviewQuestions(
       job.title,
       job.company,
@@ -66,10 +69,9 @@ export async function POST(request: Request) {
         .eq("user_id", user.id)
     }
 
-    await logUsage(user.id, "interview")
-
     return NextResponse.json({ questions })
   } catch (err: unknown) {
+    if (consumedUserId) await refundUsage(consumedUserId, "interview")
     console.error("Interview generation error:", err)
     const msg = err instanceof Error ? err.message : "Failed to generate interview questions."
     return NextResponse.json({ error: msg }, { status: 500 })

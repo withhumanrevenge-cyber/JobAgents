@@ -25,9 +25,16 @@ export async function GET() {
     monthlyCount(user.id, "interview"),
   ])
 
+  // Unlimited limits (Infinity) become null — clients treat null as "no limit".
+  const finiteOrNull = (n: number) => (isFinite(n) ? n : null)
+
   return NextResponse.json({
     plan,
-    limits: { smart_apply: limits.smart_apply, tailor: limits.tailor, interview: limits.interview },
+    limits: {
+      smart_apply: finiteOrNull(limits.smart_apply),
+      tailor: finiteOrNull(limits.tailor),
+      interview: finiteOrNull(limits.interview),
+    },
     used: { smart_apply, tailor, interview },
   })
 }

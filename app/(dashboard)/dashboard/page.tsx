@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useJobs } from "@/hooks/useJobs"
 import { useProfile } from "@/hooks/useProfile"
@@ -13,7 +13,16 @@ import Link from "next/link"
 import { Reveal } from "@/components/motion/Reveal"
 import { Stagger, StaggerItem } from "@/components/motion/Stagger"
 
-export default function DashboardHome() {
+// useSearchParams (read in DashboardHome) requires a Suspense boundary for the production build to prerender.
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>}>
+      <DashboardHome />
+    </Suspense>
+  )
+}
+
+function DashboardHome() {
   const { profile, loading: profileLoading } = useProfile()
   const { allJobRows, matches, loading: jobsLoading } = useJobs()
   const { triggerRefresh } = useDashboardStore()
