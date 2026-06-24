@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server"
 import { generateTailoredResume } from "@/lib/agents/resumeAgent"
 import { gateAction, refundUsage } from "@/lib/usage"
 
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   let consumedUserId: string | null = null
   try {

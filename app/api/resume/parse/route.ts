@@ -4,6 +4,10 @@ import { callGroq, parseJsonFromGroq } from "@/lib/groq"
 import { ParsedResume } from "@/types"
 import { PDFParse } from "pdf-parse"
 
+// pdf-parse uses pdfjs-dist, which needs the full Node runtime (not Edge) and time for parse + AI structuring.
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 const SYSTEM_PROMPT = `You are an expert resume parser. Extract all relevant information from the resume text below.
 Return ONLY a valid JSON object in this exact shape — no markdown, no extra text:
 {

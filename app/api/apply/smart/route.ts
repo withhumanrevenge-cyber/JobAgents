@@ -5,6 +5,10 @@ import { generateCoverLetter } from "@/lib/agents/coverLetterAgent"
 import { gateAction, refundUsage } from "@/lib/usage"
 import { Job, ParsedResume, ResumeData } from "@/types"
 
+// Two sequential 70B Groq calls (tailor + cover letter) — needs more than the default serverless timeout.
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   let consumedUserId: string | null = null
   try {

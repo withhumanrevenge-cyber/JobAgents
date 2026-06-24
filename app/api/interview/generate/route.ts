@@ -4,6 +4,9 @@ import { generateInterviewQuestions } from "@/lib/agents/interviewAgent"
 import { gateAction, refundUsage } from "@/lib/usage"
 import { ParsedResume } from "@/types"
 
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   let consumedUserId: string | null = null
   try {
