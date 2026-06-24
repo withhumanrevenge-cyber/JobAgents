@@ -4,7 +4,12 @@ import { createClient } from "@/lib/supabase/server"
 import { ArrowRight, Check } from "lucide-react"
 import { Reveal } from "@/components/motion/Reveal"
 
-export default async function LandingPage() {
+export default async function LandingPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
+  // Safety net: if an OAuth provider lands the auth code on "/" (e.g. Supabase falling back to Site URL),
+  // forward it to the callback route that actually exchanges it for a session.
+  const { code } = await searchParams
+  if (code) redirect(`/api/auth/callback?code=${encodeURIComponent(code)}`)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user) redirect("/dashboard")
