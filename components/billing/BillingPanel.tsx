@@ -2,15 +2,22 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { Loader2, Check, Zap, CreditCard } from "lucide-react"
+import { Loader2, Check, CreditCard, Zap } from "lucide-react"
 import { startCheckout } from "@/lib/billing/client"
-import { PRICING } from "@/lib/billing/config"
-import type { Plan } from "@/types"
+import { PLAN_CONFIG, ACTION_LABEL } from "@/lib/plans"
+import type { Plan, UsageAction } from "@/types"
 
 interface UsageData {
   plan: Plan
-  limits: { smart_apply: number | null; tailor: number | null; interview: number | null }
-  used: { smart_apply: number; tailor: number; interview: number }
+  credits: { allotment: number; used: number; remaining: number }
+  costs: Record<UsageAction, number>
+  maxVisibleMatches: number
+}
+
+const PLAN_TONE: Record<Plan, string> = {
+  free: "bg-gray-100 text-gray-600",
+  pro: "bg-blue-50 text-blue-700 border border-blue-200",
+  premium: "bg-amber-50 text-amber-700 border border-amber-200",
 }
 
 export function BillingPanel() {
@@ -27,7 +34,7 @@ export function BillingPanel() {
     }).finally(() => setLoading(false))
   }, [])
 
-  const pay = async (provider: "razorpay" | "lemonsqueezy", plan: "pro" | "lifetime") => {
+  const pay = async (provider: "razorpay" | "lemonsqueezy", plan: "pro" | "premium") => {
     setBusy(`${provider}-${plan}`); setError(null)
     try {
       await startCheckout(provider, plan)
@@ -42,59 +49,58 @@ export function BillingPanel() {
   }
   if (!data) return null
 
-  const isPaid = data.plan !== "free"
+  const { allotment, used, remaining } = data.credits
+  const pct = allotment > 0 ? Math.min(100, (used / allotment) * 100) : 0
+  const low = remaining <= Math.max(2, allotment * 0.15)
+  // Which tiers to offer as upgrades (anything above the current one).
+  const upgrades = (["pro", "premium"] as const).filter((p) => PLAN_CONFIG[p].priceUsd > PLAN_CONFIG[data.plan].priceUsd)
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
       {justUpgraded && (
         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
-          Payment received. If your plan still shows Free, give it a moment — it updates when the payment is confirmed.
+          Payment received. If your plan still shows the old tier, give it a moment to confirm.
         </p>
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-900">Plan & usage</p>
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${
-          data.plan === "free" ? "bg-gray-100 text-gray-600" :
-          data.plan === "pro" ? "bg-blue-50 text-blue-700 border border-blue-200" :
-          "bg-amber-50 text-amber-700 border border-amber-200"
-        }`}>{data.plan}</span>
+        <p className="text-sm font-medium text-gray-900">Plan & credits</p>
+        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${PLAN_TONE[data.plan]}`}>{data.plan}</span>
       </div>
 
-      {!isPaid && (
-        <div className="space-y-2">
-          <UsageBar label="Smart Applies" used={data.used.smart_apply} limit={data.limits.smart_apply} />
-          <UsageBar label="Resume tailors" used={data.used.tailor} limit={data.limits.tailor} />
-          <UsageBar label="Interview preps" used={data.used.interview} limit={data.limits.interview} />
+      {/* Credit balance */}
+      <div>
+        <div className="flex justify-between text-[11px] mb-1">
+          <span className="text-gray-500">Credits this month</span>
+          <span className={low ? "text-red-600 font-medium" : "text-gray-400"}>{remaining} / {allotment} left</span>
         </div>
-      )}
+        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${low ? "bg-red-400" : "bg-gray-900"}`} style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-[10px] text-gray-400 mt-1.5">
+          {(Object.keys(data.costs) as UsageAction[]).map((a) => `${ACTION_LABEL[a]} ${data.costs[a]}`).join(" · ")} credits · matching is free
+        </p>
+      </div>
 
-      {isPaid ? (
+      {upgrades.length === 0 ? (
         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center gap-1.5">
-          <Check className="w-3.5 h-3.5" /> Unlimited Smart Apply, tailoring, and interview prep.
+          <Check className="w-3.5 h-3.5" /> You&apos;re on the top tier — {allotment} credits/month.
         </p>
       ) : (
         <div className="space-y-3 pt-1">
-          <p className="text-xs font-medium text-gray-700">Upgrade for unlimited</p>
-
-          <PlanOption
-            title="Pro"
-            price={`$${PRICING.proMonthlyUsd}/mo`}
-            inr={`or ₹${(PRICING.proMonthlyInrPaise / 100).toLocaleString()}/mo`}
-            busy={busy}
-            onIntl={() => pay("lemonsqueezy", "pro")}
-            onIndia={() => pay("razorpay", "pro")}
-            keyPrefix="pro"
-          />
-          <PlanOption
-            title="Lifetime"
-            price={`$${PRICING.lifetimeUsd} once`}
-            inr={`or ₹${(PRICING.lifetimeInrPaise / 100).toLocaleString()} once`}
-            busy={busy}
-            onIntl={() => pay("lemonsqueezy", "lifetime")}
-            onIndia={() => pay("razorpay", "lifetime")}
-            keyPrefix="lifetime"
-          />
+          <p className="text-xs font-medium text-gray-700">Upgrade for more credits & jobs</p>
+          {upgrades.map((p) => (
+            <PlanOption
+              key={p}
+              title={PLAN_CONFIG[p].label}
+              price={`$${PLAN_CONFIG[p].priceUsd}/mo`}
+              detail={`${PLAN_CONFIG[p].credits} credits · ${PLAN_CONFIG[p].maxVisibleMatches.toLocaleString()} job matches`}
+              busy={busy}
+              onIntl={() => pay("lemonsqueezy", p)}
+              onIndia={() => pay("razorpay", p)}
+              keyPrefix={p}
+            />
+          ))}
         </div>
       )}
 
@@ -103,36 +109,17 @@ export function BillingPanel() {
   )
 }
 
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number | null }) {
-  const unlimited = limit === null
-  const pct = !unlimited && limit > 0 ? Math.min(100, (used / limit) * 100) : 0
-  const atLimit = !unlimited && used >= limit
-  return (
-    <div>
-      <div className="flex justify-between text-[11px] mb-1">
-        <span className="text-gray-500">{label}</span>
-        <span className={atLimit ? "text-red-600 font-medium" : "text-gray-400"}>{used}/{unlimited ? "∞" : limit}</span>
-      </div>
-      <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${atLimit ? "bg-red-400" : "bg-gray-900"}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  )
-}
-
-function PlanOption({ title, price, inr, busy, onIntl, onIndia, keyPrefix }: {
-  title: string; price: string; inr: string; busy: string | null
+function PlanOption({ title, price, detail, busy, onIntl, onIndia, keyPrefix }: {
+  title: string; price: string; detail: string; busy: string | null
   onIntl: () => void; onIndia: () => void; keyPrefix: string
 }) {
   return (
     <div className="border border-gray-200 rounded-md p-3">
-      <div className="flex items-baseline justify-between mb-2">
+      <div className="flex items-baseline justify-between mb-0.5">
         <p className="text-sm font-semibold text-gray-900">{title}</p>
-        <div className="text-right">
-          <p className="text-sm font-medium text-gray-900">{price}</p>
-          <p className="text-[10px] text-gray-400">{inr}</p>
-        </div>
+        <p className="text-sm font-medium text-gray-900">{price}</p>
       </div>
+      <p className="text-[10px] text-gray-400 mb-2">{detail}</p>
       <div className="flex gap-2">
         <button onClick={onIntl} disabled={!!busy}
           className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 text-white text-xs font-medium py-1.5 rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors">

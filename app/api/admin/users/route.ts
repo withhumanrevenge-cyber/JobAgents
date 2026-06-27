@@ -13,6 +13,7 @@ export interface AdminUserRow {
   smart_apply: number
   tailor: number
   interview: number
+  credits: number
   tokens: number
 }
 
@@ -32,21 +33,22 @@ export async function GET() {
   // Pull this month's usage once, then bucket per user in memory (cheap for early scale).
   const { data: usage } = await svc
     .from("usage_events")
-    .select("user_id, action, tokens")
+    .select("user_id, action, tokens, credits")
     .gte("created_at", monthStart)
 
-  const buckets = new Map<string, { smart_apply: number; tailor: number; interview: number; tokens: number }>()
+  const buckets = new Map<string, { smart_apply: number; tailor: number; interview: number; credits: number; tokens: number }>()
   for (const e of usage ?? []) {
-    const b = buckets.get(e.user_id) ?? { smart_apply: 0, tailor: 0, interview: 0, tokens: 0 }
+    const b = buckets.get(e.user_id) ?? { smart_apply: 0, tailor: 0, interview: 0, credits: 0, tokens: 0 }
     if (e.action === "smart_apply") b.smart_apply++
     else if (e.action === "tailor") b.tailor++
     else if (e.action === "interview") b.interview++
+    b.credits += e.credits ?? 0
     b.tokens += e.tokens ?? 0
     buckets.set(e.user_id, b)
   }
 
   const rows: AdminUserRow[] = (profiles ?? []).map((p) => {
-    const b = buckets.get(p.user_id) ?? { smart_apply: 0, tailor: 0, interview: 0, tokens: 0 }
+    const b = buckets.get(p.user_id) ?? { smart_apply: 0, tailor: 0, interview: 0, credits: 0, tokens: 0 }
     return {
       user_id: p.user_id,
       email: p.email,

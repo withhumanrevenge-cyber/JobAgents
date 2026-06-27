@@ -21,7 +21,7 @@ export async function applyPlan({ userId, plan, provider, customerId, subscripti
     .from("profiles")
     .update({
       plan,
-      plan_expires_at: plan === "lifetime" ? null : expiresAt ?? null,
+      plan_expires_at: expiresAt ?? null,
       billing_provider: provider,
       billing_customer_id: customerId ?? null,
       billing_subscription_id: subscriptionId ?? null,

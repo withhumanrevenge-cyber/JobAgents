@@ -36,11 +36,6 @@ export async function POST(request: Request) {
       // renews_at / ends_at is the current period end for active subscriptions.
       const expiresAt = attrs?.renews_at || attrs?.ends_at || null
       await applyPlan({ userId, plan, provider: "lemonsqueezy", customerId, subscriptionId, expiresAt })
-    } else if (eventName === "order_created") {
-      // One-time purchases (Lifetime).
-      if (!userId) return NextResponse.json({ ok: true })
-      const plan = planFromLemonVariant(variantId) ?? "lifetime"
-      await applyPlan({ userId, plan, provider: "lemonsqueezy", customerId, subscriptionId: null, expiresAt: null })
     } else if (["subscription_cancelled", "subscription_expired"].includes(eventName)) {
       if (subscriptionId) await revokeBySubscription(subscriptionId)
     }

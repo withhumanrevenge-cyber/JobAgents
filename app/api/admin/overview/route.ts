@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/server"
 import { getAdminUser } from "@/lib/admin"
-
-const PRO_PRICE = 12 // USD/mo — used for the MRR estimate.
+import { PLAN_CONFIG } from "@/lib/plans"
 
 export async function GET() {
   const admin = await getAdminUser()
@@ -13,25 +12,27 @@ export async function GET() {
 
   const { data: profiles } = await svc.from("profiles").select("plan, created_at")
   const all = profiles ?? []
-  const byPlan = { free: 0, pro: 0, lifetime: 0 }
+  const byPlan = { free: 0, pro: 0, premium: 0 }
   for (const p of all) {
-    const plan = (p.plan as keyof typeof byPlan) ?? "free"
-    if (plan in byPlan) byPlan[plan]++
+    const plan = p.plan === "pro" ? "pro" : p.plan === "premium" || p.plan === "lifetime" ? "premium" : "free"
+    byPlan[plan]++
   }
 
-  // Tokens consumed this month + distinct active users.
+  // This month's usage: tokens (cost proxy), credits spent, active users.
   const { data: usage } = await svc
     .from("usage_events")
-    .select("user_id, action, tokens, created_at")
+    .select("user_id, action, tokens, credits, created_at")
     .gte("created_at", monthStart)
   const events = usage ?? []
   const tokensThisMonth = events.reduce((sum, e) => sum + (e.tokens ?? 0), 0)
+  const creditsThisMonth = events.reduce((sum, e) => sum + (e.credits ?? 0), 0)
   const activeUsers = new Set(events.map((e) => e.user_id)).size
   const smartAppliesThisMonth = events.filter((e) => e.action === "smart_apply").length
 
-  // New signups in the last 7 days.
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const newThisWeek = all.filter((p) => p.created_at && p.created_at >= weekAgo).length
+
+  const mrr = byPlan.pro * PLAN_CONFIG.pro.priceUsd + byPlan.premium * PLAN_CONFIG.premium.priceUsd
 
   return NextResponse.json({
     totalUsers: all.length,
@@ -39,7 +40,8 @@ export async function GET() {
     activeUsers,
     newThisWeek,
     tokensThisMonth,
+    creditsThisMonth,
     smartAppliesThisMonth,
-    mrr: byPlan.pro * PRO_PRICE,
+    mrr,
   })
 }

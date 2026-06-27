@@ -1,16 +1,17 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Loader2, Users, Zap, DollarSign, Activity } from "lucide-react"
+import { Loader2, Users, Coins, DollarSign, Activity, Plus } from "lucide-react"
 import { PLAN_LABEL } from "@/lib/plans"
 import type { Plan } from "@/types"
 
 interface Overview {
   totalUsers: number
-  byPlan: { free: number; pro: number; lifetime: number }
+  byPlan: { free: number; pro: number; premium: number }
   activeUsers: number
   newThisWeek: number
   tokensThisMonth: number
+  creditsThisMonth: number
   smartAppliesThisMonth: number
   mrr: number
 }
@@ -26,13 +27,14 @@ interface UserRow {
   smart_apply: number
   tailor: number
   interview: number
+  credits: number
   tokens: number
 }
 
 const PLAN_TONE: Record<string, string> = {
   free: "bg-gray-100 text-gray-600",
   pro: "bg-blue-50 text-blue-700 border border-blue-200",
-  lifetime: "bg-amber-50 text-amber-700 border border-amber-200",
+  premium: "bg-amber-50 text-amber-700 border border-amber-200",
 }
 
 export default function AdminDashboard() {
@@ -62,9 +64,22 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id, plan }),
       })
-      if (res.ok) {
-        setUsers((prev) => prev.map((u) => (u.user_id === user_id ? { ...u, plan } : u)))
-      }
+      if (res.ok) setUsers((prev) => prev.map((u) => (u.user_id === user_id ? { ...u, plan } : u)))
+    } finally { setSavingId(null) }
+  }
+
+  const grantCredits = async (user_id: string) => {
+    const input = window.prompt("Grant how many bonus credits this month?")
+    const amount = Number(input)
+    if (!Number.isFinite(amount) || amount <= 0) return
+    setSavingId(user_id)
+    try {
+      const res = await fetch("/api/admin/grant-credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, amount }),
+      })
+      if (res.ok) setUsers((prev) => prev.map((u) => (u.user_id === user_id ? { ...u, credits: u.credits - amount } : u)))
     } finally { setSavingId(null) }
   }
 
@@ -78,15 +93,15 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-lg font-semibold text-gray-900">Admin overview</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Users, plans, usage, and AI consumption.</p>
+        <p className="text-sm text-gray-400 mt-0.5">Users, tiers, credit usage, and AI consumption.</p>
       </div>
 
       {overview && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard icon={Users} label="Total users" value={numFmt(overview.totalUsers)} sub={`+${overview.newThisWeek} this week`} />
-          <StatCard icon={DollarSign} label="Est. MRR" value={`$${numFmt(overview.mrr)}`} sub={`${overview.byPlan.pro} Pro · ${overview.byPlan.lifetime} Lifetime`} />
-          <StatCard icon={Activity} label="Active this month" value={numFmt(overview.activeUsers)} sub={`${overview.smartAppliesThisMonth} Smart Applies`} />
-          <StatCard icon={Zap} label="Tokens this month" value={numFmt(overview.tokensThisMonth)} sub="Groq usage" />
+          <StatCard icon={DollarSign} label="Est. MRR" value={`$${numFmt(overview.mrr)}`} sub={`${overview.byPlan.pro} Pro · ${overview.byPlan.premium} Premium`} />
+          <StatCard icon={Coins} label="Credits used (mo)" value={numFmt(overview.creditsThisMonth)} sub={`${overview.smartAppliesThisMonth} Smart Applies`} />
+          <StatCard icon={Activity} label="AI tokens (mo)" value={numFmt(overview.tokensThisMonth)} sub={`${overview.activeUsers} active users`} />
         </div>
       )}
 
@@ -97,7 +112,7 @@ export default function AdminDashboard() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100">
-                  {["User", "Plan", "Smart Apply", "Tailor", "Interview", "Tokens", "Set plan"].map((h) => (
+                  {["User", "Tier", "Credits used", "Smart Apply", "Tailor", "Interview", "Tokens", "Tier / Grant"].map((h) => (
                     <th key={h} className="py-3 px-4 text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -114,21 +129,32 @@ export default function AdminDashboard() {
                         {PLAN_LABEL[(u.plan as Plan)] ?? u.plan}{u.is_admin ? " · admin" : ""}
                       </span>
                     </td>
+                    <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.credits}</td>
                     <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.smart_apply}</td>
                     <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.tailor}</td>
                     <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.interview}</td>
                     <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.tokens.toLocaleString()}</td>
                     <td className="py-3 px-4">
-                      <select
-                        value={u.plan}
-                        disabled={savingId === u.user_id}
-                        onChange={(e) => setPlan(u.user_id, e.target.value as Plan)}
-                        className="bg-white border border-gray-200 text-xs text-gray-600 rounded-md py-1 px-2 focus:outline-none focus:border-gray-900 cursor-pointer disabled:opacity-50"
-                      >
-                        <option value="free">Free</option>
-                        <option value="pro">Pro</option>
-                        <option value="lifetime">Lifetime</option>
-                      </select>
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={u.plan}
+                          disabled={savingId === u.user_id}
+                          onChange={(e) => setPlan(u.user_id, e.target.value as Plan)}
+                          className="bg-white border border-gray-200 text-xs text-gray-600 rounded-md py-1 px-2 focus:outline-none focus:border-gray-900 cursor-pointer disabled:opacity-50"
+                        >
+                          <option value="free">Free</option>
+                          <option value="pro">Pro</option>
+                          <option value="premium">Premium</option>
+                        </select>
+                        <button
+                          onClick={() => grantCredits(u.user_id)}
+                          disabled={savingId === u.user_id}
+                          title="Grant bonus credits"
+                          className="border border-gray-200 text-gray-500 rounded-md p-1 hover:border-gray-400 hover:text-gray-900 disabled:opacity-50 transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

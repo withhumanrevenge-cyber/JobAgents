@@ -4,10 +4,20 @@ import { createClient } from "@/lib/supabase/server"
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get("code")
+  const token_hash = requestUrl.searchParams.get("token_hash")
+  const type = requestUrl.searchParams.get("type") as
+    | "signup"
+    | "email"
+    | "recovery"
+    | "invite"
+    | "magiclink"
+    | null
   const next = requestUrl.searchParams.get("next") ?? "/dashboard"
 
+  const supabase = await createClient()
+
+  // Path 1: PKCE code exchange (OAuth providers and some email flows)
   if (code) {
-    const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (!error && data.user) {
@@ -35,5 +45,15 @@ export async function GET(request: Request) {
     }
   }
 
+  // Path 2: Email confirmation via token_hash (Supabase email templates)
+  if (token_hash && type) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type })
+    if (!error) {
+      // Email confirmed — send them to onboarding or dashboard
+      return NextResponse.redirect(new URL(next, requestUrl.origin))
+    }
+  }
+
   return NextResponse.redirect(new URL(next, requestUrl.origin))
 }
+

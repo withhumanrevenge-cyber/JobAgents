@@ -7,8 +7,8 @@ export type JobStatus =
   | 'rejected'
   | 'offer'
 
-export type Plan = 'free' | 'pro' | 'lifetime'
-// User-facing metered actions, used for quota counting in usage_events.
+export type Plan = 'free' | 'pro' | 'premium'
+// Credit-costing actions, logged to usage_events with their credit cost.
 export type UsageAction = 'smart_apply' | 'tailor' | 'interview'
 
 export type JobSource = 'remotive' | 'adzuna' | 'jsearch'

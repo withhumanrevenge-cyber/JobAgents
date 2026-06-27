@@ -2,7 +2,7 @@
 // these calls just open the processor's checkout; the plan flips when the webhook fires.
 
 type Provider = "razorpay" | "lemonsqueezy"
-type PaidPlan = "pro" | "lifetime"
+type PaidPlan = "pro" | "premium"
 
 function loadRazorpay(): Promise<void> {
   return new Promise((resolve, reject) => {

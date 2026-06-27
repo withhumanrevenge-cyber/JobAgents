@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server"
 import { getAdminUser } from "@/lib/admin"
 import { Plan } from "@/types"
 
-const VALID: Plan[] = ["free", "pro", "lifetime"]
+const VALID: Plan[] = ["free", "pro", "premium"]
 
 // Manual plan override from the admin dashboard (comp accounts, refunds, support).
 export async function POST(request: Request) {
@@ -15,9 +15,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "user_id and a valid plan are required." }, { status: 400 })
   }
 
-  // Pro set manually gets a 30-day window; free/lifetime have no expiry.
+  // A manually-set paid tier gets a 30-day window; free has no expiry.
   const plan_expires_at =
-    plan === "pro" ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null
+    plan === "free" ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
   const svc = createServiceClient()
   const { error } = await svc

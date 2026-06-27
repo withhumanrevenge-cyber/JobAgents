@@ -1,6 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server"
 import { callGroq, parseJsonFromGroq, FAST_MODEL } from "@/lib/groq"
-import { PLAN_LIMITS, effectivePlan } from "@/lib/plans"
+import { PLAN_CONFIG, effectivePlan } from "@/lib/plans"
 import { Job, Profile, ParsedResume, MatchScoreResult, JobStatus } from "@/types"
 
 export async function scoreJob(
@@ -100,8 +100,8 @@ export async function matchJobsForUser(userId: string): Promise<{ matched: numbe
     return { matched: 0, skipped: 0 }
   }
 
-  // Free users score fewer jobs per run than Pro — the per-run cap is a plan limit.
-  const perRunCap = PLAN_LIMITS[effectivePlan(profile)].matchPerRun
+  // Higher tiers score more jobs per run.
+  const perRunCap = PLAN_CONFIG[effectivePlan(profile)].matchPerRun
   const unmatchedJobs = unmatchedJobsRaw.slice(0, perRunCap)
   console.log(`Scoring ${unmatchedJobs.length} unmatched jobs with Groq (${FAST_MODEL})...`)
 
