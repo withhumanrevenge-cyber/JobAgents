@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/server"
-import { syncAllJobs } from "@/lib/agents/jobFetcher"
+import { syncAllJobs, DEFAULT_QUERIES } from "@/lib/agents/jobFetcher"
 import { matchJobsForUser } from "@/lib/agents/matchingAgent"
 import { sendMatchDigest } from "@/lib/email"
 import { Match } from "@/types"
+
+export const runtime = "nodejs"
+export const maxDuration = 60
 
 export async function GET(request: Request) {
   try {
@@ -45,6 +48,8 @@ export async function GET(request: Request) {
     const countries = countryPool.size > 0 ? Array.from(countryPool) : undefined
 
     const fetchStats = await syncAllJobs(queries, countries)
+
+    await syncAllJobs(DEFAULT_QUERIES, ["IN"], { sources: ["adzuna"] })
 
     const { data: targetProfiles, error: profilesError } = await supabase
       .from("profiles")

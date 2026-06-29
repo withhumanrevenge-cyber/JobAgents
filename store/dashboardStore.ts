@@ -39,7 +39,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   countryFilter: "all",
   regionFilter: "all",
   experienceFilter: "all",
-  timeFilter: "all",
+  timeFilter: "30d",
   selectedJobId: null,
   syncing: false,
   refreshKey: 0,
@@ -58,5 +58,5 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   triggerRefresh: () => set((state) => ({ refreshKey: state.refreshKey + 1 })),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-  resetFilters: () => set({ searchQuery: "", statusFilter: "all", sourceFilter: "all", jobTypeFilter: "all", countryFilter: "all", regionFilter: "all", experienceFilter: "all", timeFilter: "all" }),
+  resetFilters: () => set({ searchQuery: "", statusFilter: "all", sourceFilter: "all", jobTypeFilter: "all", countryFilter: "all", regionFilter: "all", experienceFilter: "all", timeFilter: "30d" }),
 }))

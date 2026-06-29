@@ -12,6 +12,8 @@ interface UsageData {
   credits: { allotment: number; used: number; remaining: number }
   costs: Record<UsageAction, number>
   maxVisibleMatches: number
+  prices: { pro: string; premium: string }
+  processors: { razorpay: boolean; lemonsqueezy: boolean }
 }
 
 const PLAN_TONE: Record<Plan, string> = {
@@ -91,9 +93,10 @@ export function BillingPanel() {
             <PlanOption
               key={p}
               title={PLAN_CONFIG[p].label}
-              price={`$${PLAN_CONFIG[p].priceUsd}/mo`}
+              price={`${data.prices[p]}/mo`}
               detail={`${PLAN_CONFIG[p].credits} credits · ${PLAN_CONFIG[p].maxVisibleMatches.toLocaleString()} job matches`}
               busy={busy}
+              processors={data.processors}
               onIntl={() => pay("lemonsqueezy", p)}
               onIndia={() => pay("razorpay", p)}
               keyPrefix={p}
@@ -107,10 +110,13 @@ export function BillingPanel() {
   )
 }
 
-function PlanOption({ title, price, detail, busy, onIntl, onIndia, keyPrefix }: {
+function PlanOption({ title, price, detail, busy, processors, onIntl, onIndia, keyPrefix }: {
   title: string; price: string; detail: string; busy: string | null
+  processors: { razorpay: boolean; lemonsqueezy: boolean }
   onIntl: () => void; onIndia: () => void; keyPrefix: string
 }) {
+  const both = processors.razorpay && processors.lemonsqueezy
+  const none = !processors.razorpay && !processors.lemonsqueezy
   return (
     <div className="border border-gray-200 rounded-md p-3">
       <div className="flex items-baseline justify-between mb-0.5">
@@ -118,18 +124,26 @@ function PlanOption({ title, price, detail, busy, onIntl, onIndia, keyPrefix }: 
         <p className="text-sm font-medium text-gray-900">{price}</p>
       </div>
       <p className="text-[10px] text-gray-400 mb-2">{detail}</p>
-      <div className="flex gap-2">
-        <button onClick={onIntl} disabled={!!busy}
-          className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 text-white text-xs font-medium py-1.5 rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors">
-          {busy === `lemonsqueezy-${keyPrefix}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
-          Card
-        </button>
-        <button onClick={onIndia} disabled={!!busy}
-          className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 text-gray-700 text-xs font-medium py-1.5 rounded-md hover:border-gray-400 disabled:opacity-50 transition-colors">
-          {busy === `razorpay-${keyPrefix}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-          UPI / India
-        </button>
-      </div>
+      {none ? (
+        <p className="text-[10px] text-gray-400">Checkout coming soon.</p>
+      ) : (
+        <div className="flex gap-2">
+          {processors.lemonsqueezy && (
+            <button onClick={onIntl} disabled={!!busy}
+              className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 text-white text-xs font-medium py-1.5 rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors">
+              {busy === `lemonsqueezy-${keyPrefix}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
+              {both ? "Card" : "Upgrade"}
+            </button>
+          )}
+          {processors.razorpay && (
+            <button onClick={onIndia} disabled={!!busy}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md disabled:opacity-50 transition-colors ${both ? "border border-gray-200 text-gray-700 hover:border-gray-400" : "bg-gray-900 text-white hover:bg-gray-700"}`}>
+              {busy === `razorpay-${keyPrefix}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+              {both ? "UPI / India" : "Upgrade"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

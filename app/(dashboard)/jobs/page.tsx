@@ -19,15 +19,14 @@ export default function JobsPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const { searchQuery, statusFilter, sourceFilter, jobTypeFilter, countryFilter, regionFilter, experienceFilter, timeFilter } = useDashboardStore()
 
-  const timeThreshold = TIME_THRESHOLD_MS[timeFilter]
-  const cutoff = timeThreshold === null ? null : Date.now() - timeThreshold
+  const cutoff = Date.now() - TIME_THRESHOLD_MS[timeFilter]
 
   const filteredMatches = allJobRows
     .filter((match) => {
       const job = match.job
       if (!job) return false
       const q = `${job.title} ${job.company} ${job.tags.join(" ")}`.toLowerCase()
-      const postedAfter = cutoff === null || (job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : false)
+      const postedAfter = job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : false
       return (searchQuery === "" || q.includes(searchQuery.toLowerCase()))
         && (statusFilter === "all" || match.status === statusFilter)
         && (sourceFilter === "all" || job.source === sourceFilter)

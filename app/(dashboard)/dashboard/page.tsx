@@ -78,8 +78,10 @@ function DashboardHome() {
   }
 
   const threshold = profile?.match_threshold || 70
+  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
   const topMatches = [...matches]
-    .filter((m) => m.match_score >= threshold && m.status !== "skipped")
+    .filter((m) => m.match_score >= threshold && m.status !== "skipped"
+      && (m.job?.posted_date ? new Date(m.job.posted_date).getTime() >= monthAgo : false))
     .sort((a, b) => b.match_score - a.match_score)
     .slice(0, 5)
 

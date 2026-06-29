@@ -2,6 +2,26 @@ import { createServiceClient } from "@/lib/supabase/server"
 import { Job, JobSource, JobType, ExperienceLevel } from "@/types"
 import { ADZUNA_SUPPORTED, COUNTRY_NAME, DEFAULT_COUNTRY } from "@/lib/countries"
 
+export const DEFAULT_QUERIES = [
+  "software engineer",
+  "frontend developer",
+  "backend developer",
+  "full stack developer",
+  "data analyst",
+  "product manager",
+  "devops engineer",
+  "ui ux designer",
+]
+
+const RECENT_DAYS = 30
+
+function isRecent(job: Partial<Job>): boolean {
+  if (!job.posted_date) return true
+  const t = new Date(job.posted_date).getTime()
+  if (Number.isNaN(t)) return true
+  return Date.now() - t <= RECENT_DAYS * 24 * 60 * 60 * 1000
+}
+
 function detectJobType(location: string | null, description: string | null, isRemoteFlag?: boolean): JobType {
   const haystack = `${location || ""} ${description?.slice(0, 500) || ""}`.toLowerCase()
   if (haystack.includes("hybrid")) return "hybrid"
@@ -158,7 +178,7 @@ export async function fetchAdzunaJobs(query = "software engineer", countryCode =
 
   try {
     const encodedQuery = encodeURIComponent(query)
-    const pages = [1, 2, 3]
+    const pages = [1, 2, 3, 4, 5]
     const pageResults = await Promise.all(
       pages.map(async (page) => {
         try {
@@ -305,41 +325,35 @@ export async function syncAllJobs(
     ? await Promise.all(roleQueries.map((q) => fetchRemotiveJobs(q)))
     : []
 
-  const allRawJobs: Partial<Job>[] = [...perPairResults.flat(2), ...remotiveResults.flat()]
+  const fetched: Partial<Job>[] = [...perPairResults.flat(2), ...remotiveResults.flat()]
+
+  const seen = new Set<string>()
+  const allRawJobs = fetched.filter(isRecent).filter((j) => {
+    const key = `${j.source}:${j.source_id}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
   if (allRawJobs.length === 0) {
-    return { fetched: 0, new: 0, duplicates: 0 }
+    return { fetched: fetched.length, new: 0, duplicates: 0 }
   }
 
   const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from("jobs")
+    .upsert(allRawJobs, { onConflict: "source,source_id", ignoreDuplicates: true })
+    .select("id")
 
-  let newCount = 0
-  let dupCount = 0
-
-  for (const rawJob of allRawJobs) {
-    try {
-      const { data, error } = await supabase
-        .from("jobs")
-        .insert(rawJob)
-        .select("id")
-        .single()
-
-      if (error) {
-        if (error.code === "23505") {
-          dupCount++
-        } else {
-          console.error("Failed to insert job:", error.message)
-        }
-      } else if (data) {
-        newCount++
-      }
-    } catch {
-      dupCount++
-    }
+  if (error) {
+    console.error("Bulk job insert failed:", error.message)
+    return { fetched: fetched.length, new: 0, duplicates: 0 }
   }
 
+  const newCount = data?.length ?? 0
   return {
-    fetched: allRawJobs.length,
+    fetched: fetched.length,
     new: newCount,
-    duplicates: dupCount,
+    duplicates: allRawJobs.length - newCount,
   }
 }
