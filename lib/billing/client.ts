@@ -38,7 +38,7 @@ export async function startCheckout(provider: Provider, plan: PaidPlan): Promise
   const options: Record<string, unknown> = {
     key: data.key_id,
     name: "JobAgent",
-    description: plan === "pro" ? "JobAgent Pro" : "JobAgent Lifetime",
+    description: plan === "pro" ? "JobAgent Pro" : "JobAgent Premium",
     theme: { color: "#111111" },
     handler: () => { window.location.href = "/settings?upgraded=1" },
   }

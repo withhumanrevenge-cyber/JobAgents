@@ -79,7 +79,7 @@ export default function OnboardingPage() {
         target_roles: targetRoles,
         target_country: targetCountry,
         match_threshold: matchThreshold, auto_apply: false, onboarded: true,
-      })
+      }, { onConflict: "user_id" })
       if (upsertError) throw upsertError
 
       if (parsedResume) {
@@ -110,7 +110,7 @@ export default function OnboardingPage() {
           match_threshold: 70,
           auto_apply: false,
           onboarded: true,
-        })
+        }, { onConflict: "user_id" })
       }
     } finally {
       router.push("/dashboard")

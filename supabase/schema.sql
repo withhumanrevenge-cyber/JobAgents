@@ -42,7 +42,7 @@ create table matches (
   id                  uuid primary key default gen_random_uuid(),
   user_id             uuid not null references auth.users(id) on delete cascade,
   job_id              uuid not null references jobs(id) on delete cascade,
-  match_score         int not null check (match_score between 0 and 100),
+  match_score         int not null check (match_score between -1 and 100),
   match_reason        text,
   matched_skills      text[],
   missing_skills      text[],

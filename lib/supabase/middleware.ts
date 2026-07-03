@@ -54,12 +54,15 @@ export async function updateSession(request: NextRequest) {
   if (!user && !isPublicRoute && !isApiRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.search = path !== '/dashboard' ? `next=${encodeURIComponent(path)}` : ''
     return NextResponse.redirect(url)
   }
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    const next = request.nextUrl.searchParams.get('next')
+    url.pathname = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 

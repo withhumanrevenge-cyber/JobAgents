@@ -54,6 +54,7 @@ Built as a production-grade, full-stack SaaS: authentication, a credit-metered b
 - **Application tracker** — A pipeline from matched → applied → interview → offer, with notes.
 - **Email digests** — A daily summary of fresh high-fit matches, delivered via Resend.
 - **Credit-based plans** — Free, Pro, and Premium tiers with usage metering; **region-aware pricing** detected at the edge.
+- **Hiring dashboard (two-sided)** — Recruiters post roles and get AI-ranked candidates from an opt-in talent pool, with fit scores, skill breakdowns, and a shortlist pipeline.
 - **Admin dashboard** — Users, estimated MRR, AI token usage, and manual plan controls.
 - **Auth** — Email/password and Google OAuth via Supabase, with row-level security on every table.
 
@@ -129,11 +130,11 @@ See [`.env.example`](.env.example) for the full list of environment variables.
 ## Project Structure
 
 ```
-app/                  Routes — marketing, auth, dashboard, admin, API handlers
-  api/                Route handlers (jobs, match, resume, apply, billing, webhooks, cron)
+app/                  Routes — marketing, auth, dashboard, hiring, admin, API handlers
+  api/                Route handlers (jobs, match, resume, apply, hire, billing, webhooks, cron)
 components/           UI: layout, jobs, billing, resume, legal
 lib/
-  agents/             AI agents (fetch, match, tailor, cover letter, interview)
+  agents/             AI agents (fetch, match, tailor, cover letter, interview, candidates)
   billing/            Processor-agnostic checkout + entitlement
   marketing/          Pricing source of truth + geo currency
   supabase/           Server / client / middleware helpers

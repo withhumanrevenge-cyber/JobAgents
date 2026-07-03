@@ -33,10 +33,13 @@ function DashboardHome() {
 
   useEffect(() => {
     if (matches.length > 0 || allJobRows.length > 0) {
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const inFeed = (m: (typeof matches)[number]) =>
+        m.job?.posted_date ? new Date(m.job.posted_date).getTime() >= cutoff : false
       Promise.resolve().then(() =>
         setStats({
-          totalJobs:        allJobRows.length,
-          matches:          matches.filter((m) => m.status === "reviewed").length,
+          totalJobs:        allJobRows.filter(inFeed).length,
+          matches:          matches.filter((m) => m.status === "reviewed" && inFeed(m)).length,
           applicationsSent: matches.filter((m) => m.status === "applied").length,
           interviews:       matches.filter((m) => m.status === "interview").length,
         })

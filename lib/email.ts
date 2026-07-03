@@ -2,7 +2,7 @@ import { Resend } from "resend"
 import { Match } from "@/types"
 
 const FROM_ADDRESS = process.env.RESEND_FROM || "JobAgent <onboarding@resend.dev>"
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
 function getClient(): Resend | null {
   const key = process.env.RESEND_API_KEY

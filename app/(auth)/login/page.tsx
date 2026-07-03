@@ -21,7 +21,9 @@ export default function LoginPage() {
     try {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password })
       if (err) throw err
-      router.push("/dashboard"); router.refresh()
+      const next = new URLSearchParams(window.location.search).get("next")
+      router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard")
+      router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid email or password.")
     } finally { setLoading(false) }

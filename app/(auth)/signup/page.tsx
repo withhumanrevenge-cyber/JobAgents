@@ -35,7 +35,7 @@ export default function SignupPage() {
       })
       if (err) throw err
       if (data.session) {
-        await supabase.from("profiles").upsert({ user_id: data.session.user.id, full_name: fullName, email, match_threshold: 70, auto_apply: false, onboarded: false })
+        await supabase.from("profiles").upsert({ user_id: data.session.user.id, full_name: fullName, email, match_threshold: 70, auto_apply: false, onboarded: false }, { onConflict: "user_id" })
         router.push("/onboarding"); router.refresh()
       } else {
         setSuccess("Check your email to confirm your account.")

@@ -88,7 +88,15 @@ export async function matchJobsForUser(userId: string): Promise<{ matched: numbe
 
   const matchedJobIds = (matchedJobIdsData || []).map((m) => m.job_id)
 
-  let jobsQuery = supabase.from("jobs").select("*").order("posted_date", { ascending: false })
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  let jobsQuery = supabase
+    .from("jobs")
+    .select("*")
+    .gte("posted_date", monthAgo)
+    .order("posted_date", { ascending: false })
+  if (!PLAN_CONFIG[effectivePlan(profile)].allSources) {
+    jobsQuery = jobsQuery.eq("source", "remotive")
+  }
   if (matchedJobIds.length > 0) {
     jobsQuery = jobsQuery.not("id", "in", `(${matchedJobIds.join(",")})`)
   }
