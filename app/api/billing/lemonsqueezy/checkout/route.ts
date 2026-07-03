@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { lemonVariantForPlan } from "@/lib/billing/config"
 import { Plan } from "@/types"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "")
 
 export async function POST(request: Request) {
   try {

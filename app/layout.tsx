@@ -7,7 +7,7 @@ const inter = Inter({
   variable: "--font-sans",
 })
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/+$/, "")
 const TITLE = "JobAgent — AI jobs matched to your resume"
 const DESCRIPTION = "Upload your resume once. We pull jobs from across the web, score each one against your background, and prep a tailored resume, cover letter, and interview questions for the ones that fit."
 
