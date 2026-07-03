@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useProfile } from "@/hooks/useProfile"
-import { Loader2, Check, AlertTriangle, Mail } from "lucide-react"
+import { Loader2, Check, AlertTriangle, Mail, Users } from "lucide-react"
 import { calculateDaysAgo } from "@/lib/utils"
 import { ResumeUpload } from "@/components/resume/ResumeUpload"
 import { TagInput } from "@/components/ui/TagInput"
@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [targetCountry, setTargetCountry]   = useState<string>(DEFAULT_COUNTRY)
   const [matchThreshold, setMatchThreshold] = useState(70)
   const [emailNotifications, setEmailNotifications] = useState(true)
+  const [openToWork, setOpenToWork]         = useState(false)
   const [sendingTest, setSendingTest]       = useState(false)
 
   const [resumeUrl, setResumeUrl]           = useState<string | null>(null)
@@ -42,6 +43,7 @@ export default function SettingsPage() {
         setTargetCountry(profile.target_country || DEFAULT_COUNTRY)
         setMatchThreshold(profile.match_threshold || 70)
         setEmailNotifications(profile.email_notifications ?? true)
+        setOpenToWork(profile.open_to_work ?? false)
         setResumeUrl(profile.base_resume_url || null)
         setParsedResume(profile.parsed_resume || null)
         setParsedAt(profile.resume_parsed_at || null)
@@ -74,7 +76,7 @@ export default function SettingsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setFeedback(null)
-    const res = await updateProfile({ full_name: fullName, email, phone, linkedin_url: linkedinUrl, target_roles: targetRoles, target_country: targetCountry, match_threshold: matchThreshold, email_notifications: emailNotifications })
+    const res = await updateProfile({ full_name: fullName, email, phone, linkedin_url: linkedinUrl, target_roles: targetRoles, target_country: targetCountry, match_threshold: matchThreshold, email_notifications: emailNotifications, open_to_work: openToWork })
     setFeedback(res.success
       ? { type: "success", message: "Settings saved." }
       : { type: "error",   message: res.error || "Failed to save." }
@@ -191,6 +193,25 @@ export default function SettingsPage() {
                 {sendingTest ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
                 {sendingTest ? "Sending..." : "Send test email"}
               </button>
+            </div>
+
+            <hr className="border-gray-100" />
+            <p className="text-sm font-medium text-gray-900">Talent pool</p>
+
+            <div className="bg-gray-50 border border-gray-200 p-3 rounded-md">
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-2.5">
+                  <Users className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Open to work</p>
+                    <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">Let recruiters on JobAgent discover you for roles you match. They see your name, resume summary, and contact details. Turn off any time.</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input type="checkbox" checked={openToWork} onChange={e => setOpenToWork(e.target.checked)} className="sr-only peer" />
+                  <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-gray-900 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                </label>
+              </div>
             </div>
 
             <button type="submit" disabled={saving}

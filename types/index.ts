@@ -10,6 +10,10 @@ export type JobStatus =
 export type Plan = 'free' | 'pro' | 'premium'
 export type UsageAction = 'smart_apply' | 'tailor' | 'interview'
 
+export type AccountType = 'seeker' | 'recruiter'
+export type PostingStatus = 'open' | 'closed'
+export type CandidateStatus = 'new' | 'shortlisted' | 'contacted' | 'rejected'
+
 export type JobSource = 'remotive' | 'adzuna' | 'jsearch'
 export type JobType = 'remote' | 'hybrid' | 'onsite' | 'unknown'
 export type ExperienceLevel = 'entry' | 'mid' | 'senior' | 'lead' | 'unknown'
@@ -113,6 +117,44 @@ export interface Profile {
   billing_provider: 'razorpay' | 'lemonsqueezy' | null
   billing_customer_id: string | null
   billing_subscription_id: string | null
+  account_type: AccountType
+  open_to_work: boolean
+  company_name: string | null
+}
+
+export interface JobPosting {
+  id: string
+  recruiter_id: string
+  title: string
+  company: string
+  location: string | null
+  job_type: JobType
+  experience_level: ExperienceLevel
+  description: string
+  skills: string[]
+  salary_range: string | null
+  status: PostingStatus
+  created_at: string
+}
+
+export interface CandidateProfile {
+  full_name: string | null
+  email: string | null
+  linkedin_url: string | null
+  parsed_resume: ParsedResume | null
+}
+
+export interface CandidateMatch {
+  id: string
+  posting_id: string
+  candidate_id: string
+  candidate?: CandidateProfile
+  match_score: number
+  match_reason: string | null
+  matched_skills: string[]
+  missing_skills: string[]
+  status: CandidateStatus
+  created_at: string
 }
 
 export interface ResumeData {
