@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef, useMemo } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ArrowLeft, Sparkles, Mail, ExternalLink, Users } from "lucide-react"
+import { Loader2, ArrowLeft, Sparkles, Mail, ExternalLink, Users, SlidersHorizontal } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 import { MatchScoreBadge } from "@/components/jobs/MatchScoreBadge"
 import { JOB_TYPE_LABEL, EXPERIENCE_LABEL } from "@/lib/status"
 import type { JobPosting, CandidateMatch, CandidateStatus, JobType, ExperienceLevel } from "@/types"
@@ -13,21 +14,37 @@ const STATUS_OPTIONS: CandidateStatus[] = ["new", "shortlisted", "contacted", "r
 export default function PostingDetailPage() {
   const params = useParams()
   const id = params.id as string
+  const supabase = useMemo(() => createClient(), [])
 
   const [posting, setPosting] = useState<JobPosting | null>(null)
   const [candidates, setCandidates] = useState<CandidateMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [minScore, setMinScore] = useState(70)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/hire/postings/${id}/candidates`)
     const data = await res.json()
-    if (!data.error) { setPosting(data.posting); setCandidates(data.candidates) }
+    if (!data.error) {
+      setPosting(data.posting)
+      setCandidates(data.candidates)
+      if (typeof data.threshold === "number") setMinScore(data.threshold)
+    }
     setLoading(false)
   }, [id])
 
   useEffect(() => { load() }, [load])
+
+  const setThreshold = (value: number) => {
+    setMinScore(value)
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await supabase.from("profiles").update({ match_threshold: value }).eq("user_id", user.id)
+    }, 600)
+  }
 
   const findCandidates = async () => {
     setScanning(true); setError(null)
@@ -49,6 +66,8 @@ export default function PostingDetailPage() {
       body: JSON.stringify({ status }),
     })
   }
+
+  const visibleCandidates = candidates.filter((c) => c.match_score >= minScore)
 
   if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
   if (!posting) return <div className="text-center py-16 text-sm text-gray-500">Posting not found. <Link href="/hire" className="text-gray-900 underline">Back to hiring</Link></div>
@@ -80,8 +99,18 @@ export default function PostingDetailPage() {
 
       {error && <div className="p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-md text-xs">{error}</div>}
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">{candidates.length} candidate{candidates.length === 1 ? "" : "s"}</p>
+      <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-2 shrink-0">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-xs text-gray-500">Min match score</span>
+          <span className="text-xs font-semibold text-gray-900 tabular-nums w-9">{minScore}%</span>
+        </div>
+        <input type="range" min="0" max="100" step="5" value={minScore}
+          onChange={(e) => setThreshold(Number(e.target.value))}
+          className="w-full sm:flex-1 h-1 bg-gray-200 rounded appearance-none cursor-pointer accent-gray-900" />
+        <p className="text-xs text-gray-400 shrink-0">
+          {visibleCandidates.length} of {candidates.length} shown
+        </p>
       </div>
 
       {candidates.length === 0 ? (
@@ -92,9 +121,15 @@ export default function PostingDetailPage() {
             Click <span className="font-medium text-gray-600">Find candidates</span> to scan the opt-in talent pool and rank matches for this role.
           </p>
         </div>
+      ) : visibleCandidates.length === 0 ? (
+        <div className="text-center py-14 border border-dashed border-gray-200 rounded-lg">
+          <Users className="w-6 h-6 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm text-gray-500">No candidates at {minScore}%+ match</p>
+          <p className="text-xs text-gray-400 mt-1">Lower the threshold to see more of the {candidates.length} scored candidate{candidates.length === 1 ? "" : "s"}.</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {candidates.map((c) => (
+          {visibleCandidates.map((c) => (
             <div key={c.id} className="bg-white border border-gray-200 rounded-lg p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">

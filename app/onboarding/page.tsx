@@ -8,8 +8,10 @@ import { ResumeUpload } from "@/components/resume/ResumeUpload"
 import { TagInput } from "@/components/ui/TagInput"
 import { ParsedResume } from "@/types"
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries"
-import { Loader2, Check, User, Mail, Phone, Link2, ChevronRight, ChevronLeft, FileText } from "lucide-react"
+import { Loader2, Check, User, Mail, Phone, Link2, ChevronRight, ChevronLeft, FileText, Briefcase, Building2 } from "lucide-react"
 import { slideHorizontal } from "@/lib/motion"
+
+type Mode = "choose" | "seeker" | "recruiter"
 
 const STEPS = [
   { id: 1, title: "Your details",  description: "Name, email, and links so we can address you" },
@@ -21,6 +23,8 @@ export default function OnboardingPage() {
   const router   = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
+  const [mode, setMode]     = useState<Mode>("choose")
+  const [companyName, setCompanyName] = useState("")
   const [step, setStep]     = useState(1)
   const [direction, setDirection] = useState(1)
   const [saving, setSaving] = useState(false)
@@ -52,8 +56,12 @@ export default function OnboardingPage() {
       const name = user.user_metadata?.full_name || user.user_metadata?.name || ""
       if (name) setFullName(name)
 
-      const { data: profile } = await supabase.from("profiles").select("onboarded").eq("user_id", user.id).single()
-      if (profile?.onboarded) router.replace("/dashboard")
+      const { data: profile } = await supabase.from("profiles").select("onboarded, account_type").eq("user_id", user.id).single()
+      if (profile?.onboarded) {
+        router.replace(profile.account_type === "recruiter" ? "/hire" : "/dashboard")
+        return
+      }
+      if (new URLSearchParams(window.location.search).get("as") === "recruiter") setMode("recruiter")
     }
     init()
   }, [supabase, router])
@@ -99,6 +107,33 @@ export default function OnboardingPage() {
     } finally { setSaving(false) }
   }
 
+  const handleRecruiterFinish = async () => {
+    setSaving(true); setError(null)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error("Not authenticated.")
+      const { error: upsertError } = await supabase.from("profiles").upsert({
+        user_id: user.id,
+        full_name: fullName,
+        email,
+        company_name: companyName,
+        account_type: "recruiter",
+        match_threshold: matchThreshold,
+        auto_apply: false,
+        onboarded: true,
+      }, { onConflict: "user_id" })
+      if (upsertError) throw upsertError
+      router.push("/hire")
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message
+        : (err && typeof err === "object" && "message" in err && (err as { message?: unknown }).message)
+          ? String((err as { message: unknown }).message)
+        : "Failed to save. Please try again."
+      setError(msg)
+    } finally { setSaving(false) }
+  }
+
   const handleSkip = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -127,9 +162,74 @@ export default function OnboardingPage() {
         <div className="text-center mb-6 sm:mb-8">
           <p className="text-sm font-semibold text-gray-900 mb-1">JobAgent</p>
           <h1 className="text-2xl font-bold text-gray-900">Get started</h1>
-          <p className="text-gray-500 text-sm mt-1">Complete your profile to start finding jobs that fit.</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {mode === "recruiter" ? "Set up your hiring workspace." : mode === "seeker" ? "Complete your profile to start finding jobs that fit." : "First, tell us what brings you here."}
+          </p>
         </div>
 
+        {mode === "choose" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onClick={() => setMode("seeker")}
+              className="bg-white border border-gray-200 rounded-lg p-5 text-left hover:border-gray-900 transition-colors group">
+              <Briefcase className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition-colors mb-3" />
+              <p className="text-sm font-semibold text-gray-900">I&apos;m looking for a job</p>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed">Upload your resume and get AI-matched jobs, tailored resumes, and interview prep.</p>
+            </button>
+            <button onClick={() => setMode("recruiter")}
+              className="bg-white border border-gray-200 rounded-lg p-5 text-left hover:border-gray-900 transition-colors group">
+              <Building2 className="w-5 h-5 text-gray-400 group-hover:text-gray-900 transition-colors mb-3" />
+              <p className="text-sm font-semibold text-gray-900">I&apos;m hiring</p>
+              <p className="text-xs text-gray-400 mt-1 leading-relaxed">Post roles and get AI-ranked candidates from our opt-in talent pool.</p>
+            </button>
+          </div>
+        )}
+
+        {mode === "recruiter" && (
+          <>
+            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 space-y-4">
+              {error && <div className="p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-md text-xs">{error}</div>}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5">Your name *</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Your name" className={`${inputCls} pl-9`} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5">Company *</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input type="text" required value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Company name" className={`${inputCls} pl-9`} />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-xs text-gray-500">Candidate match threshold</label>
+                  <span className="text-xs font-semibold text-gray-900">{matchThreshold}%</span>
+                </div>
+                <input type="range" min="0" max="100" value={matchThreshold}
+                  onChange={e => setMatchThreshold(Number(e.target.value))}
+                  className="w-full h-1 bg-gray-200 rounded appearance-none cursor-pointer accent-gray-900" />
+                <p className="text-[10px] text-gray-400 mt-1.5">Candidates scoring below {matchThreshold}% against your role are hidden by default. You can adjust this per posting later.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setMode("choose")}
+                className="flex-1 bg-white border border-gray-200 text-gray-700 text-sm font-medium py-2.5 rounded-md flex items-center justify-center gap-1.5 hover:border-gray-400 transition-colors">
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+              <button onClick={handleRecruiterFinish} disabled={saving || !fullName.trim() || !companyName.trim()}
+                className="flex-1 bg-gray-900 text-white text-sm font-medium py-2.5 rounded-md flex items-center justify-center gap-2 hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving ? "Saving..." : "Start hiring"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {mode === "seeker" && (<>
         <div className="flex items-center justify-center gap-1 mb-6">
           {STEPS.map((s, idx) => (
             <React.Fragment key={s.id}>
@@ -287,6 +387,7 @@ export default function OnboardingPage() {
             Skip for now →
           </button>
         )}
+        </>)}
       </div>
     </div>
   )

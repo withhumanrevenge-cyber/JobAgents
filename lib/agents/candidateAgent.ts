@@ -69,8 +69,9 @@ export async function matchCandidatesForPosting(postingId: string): Promise<{ sc
   const done = new Set((existing || []).map((e) => e.candidate_id))
 
   let scored = 0
-  for (const c of candidates) {
-    if (done.has(c.user_id) || !c.parsed_resume) continue
+  const pending = candidates.filter((c) => !done.has(c.user_id) && c.parsed_resume)
+
+  const scoreOne = async (c: (typeof pending)[number]) => {
     try {
       const result = await scoreCandidate(posting as JobPosting, { full_name: c.full_name, parsed_resume: c.parsed_resume })
       const { error } = await supabase.from("candidate_matches").insert({
@@ -86,7 +87,10 @@ export async function matchCandidatesForPosting(postingId: string): Promise<{ sc
     } catch (err) {
       console.warn(`Candidate scoring failed for ${c.user_id}:`, err instanceof Error ? err.message : err)
     }
-    await new Promise((r) => setTimeout(r, 80))
+  }
+
+  for (let i = 0; i < pending.length; i += 6) {
+    await Promise.all(pending.slice(i, i + 6).map(scoreOne))
   }
 
   return { scored }

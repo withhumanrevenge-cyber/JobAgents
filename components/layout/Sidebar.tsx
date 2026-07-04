@@ -22,14 +22,18 @@ export function Sidebar() {
   const supabase = createClient()
   const prefersReduced = useReducedMotion()
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isRecruiter, setIsRecruiter] = useState(false)
   const sidebarOpen    = useDashboardStore((s) => s.sidebarOpen)
   const setSidebarOpen = useDashboardStore((s) => s.setSidebarOpen)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      supabase.from("profiles").select("is_admin").eq("user_id", user.id).single()
-        .then(({ data }) => setIsAdmin(!!data?.is_admin))
+      supabase.from("profiles").select("is_admin, account_type").eq("user_id", user.id).single()
+        .then(({ data }) => {
+          setIsAdmin(!!data?.is_admin)
+          setIsRecruiter(data?.account_type === "recruiter")
+        })
     })
   }, [supabase])
 
@@ -112,11 +116,13 @@ export function Sidebar() {
       </nav>
 
       <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
-        <Link href="/hire"
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-          <Building2 className="w-4 h-4 shrink-0 text-gray-400" />
-          For employers
-        </Link>
+        {isRecruiter && (
+          <Link href="/hire"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+            <Building2 className="w-4 h-4 shrink-0 text-gray-400" />
+            Hiring dashboard
+          </Link>
+        )}
         {isAdmin && (
           <Link href="/admin"
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">

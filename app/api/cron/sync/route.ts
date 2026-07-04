@@ -63,10 +63,12 @@ export async function GET(request: Request) {
     const matchStats: Record<string, { matched: number; skipped: number }> = {}
     const emailStats: { sent: number; skipped: number; failed: number } = { sent: 0, skipped: 0, failed: 0 }
 
+    const startedAt = Date.now()
     if (targetProfiles && targetProfiles.length > 0) {
       for (const profile of targetProfiles) {
+        if (Date.now() - startedAt > 40_000) break
         try {
-          const stats = await matchJobsForUser(profile.user_id)
+          const stats = await matchJobsForUser(profile.user_id, { limit: 10 })
           matchStats[profile.user_id] = stats
 
           if (!profile.email_notifications || !profile.email || stats.matched === 0) {

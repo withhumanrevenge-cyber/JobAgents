@@ -53,7 +53,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .filter((m) => profiles[m.candidate_id])
     .map((m) => ({ ...m, candidate: profiles[m.candidate_id] }))
 
-  return NextResponse.json({ posting, candidates })
+  const { data: me } = await svc.from("profiles").select("match_threshold").eq("user_id", user.id).single()
+
+  return NextResponse.json({ posting, candidates, threshold: me?.match_threshold ?? 70 })
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

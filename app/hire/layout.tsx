@@ -8,6 +8,14 @@ export default async function HireLayout({ children }: { children: React.ReactNo
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect("/login")
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("account_type, onboarded")
+    .eq("user_id", user.id)
+    .single()
+  if (!profile?.onboarded) redirect("/onboarding?as=recruiter")
+  if (profile.account_type !== "recruiter") redirect("/dashboard")
+
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <header className="border-b border-gray-200 bg-white">

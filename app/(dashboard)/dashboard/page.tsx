@@ -59,12 +59,15 @@ function DashboardHome() {
         const d = await fetchRes.json().catch(() => ({}))
         throw new Error(d.error || "Failed to fetch jobs.")
       }
-      const matchRes = await fetch("/api/match", { method: "POST" })
-      if (!matchRes.ok) {
+      for (let i = 0; i < 15; i++) {
+        const matchRes = await fetch("/api/match", { method: "POST" })
         const d = await matchRes.json().catch(() => ({}))
-        throw new Error(d.error || "Scoring failed.")
+        if (!matchRes.ok) {
+          throw new Error(d.error || "Scoring failed.")
+        }
+        triggerRefresh()
+        if (Number(d.remaining ?? 0) <= 0) break
       }
-      triggerRefresh()
     } catch (err: unknown) {
       setInlineSyncError(err instanceof Error ? err.message : "Job search failed.")
     } finally {

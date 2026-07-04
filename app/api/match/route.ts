@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { matchJobsForUser } from "@/lib/agents/matchingAgent"
 
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 export async function POST() {
   try {
     const supabase = await createClient()
@@ -16,6 +19,7 @@ export async function POST() {
   } catch (err: unknown) {
     console.error("Error in job matching API:", err)
     const errMsg = err instanceof Error ? err.message : "Failed to score jobs"
-    return NextResponse.json({ error: errMsg }, { status: 500 })
+    const needsResume = errMsg.includes("Upload your resume")
+    return NextResponse.json({ error: errMsg }, { status: needsResume ? 400 : 500 })
   }
 }

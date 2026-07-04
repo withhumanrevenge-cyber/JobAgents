@@ -23,6 +23,7 @@ export function TopNav() {
   const [syncStatus, setSyncStatus] = useState<"idle" | "fetching" | "scoring" | "done">("idle")
   const [syncError, setSyncError]   = useState<string | null>(null)
   const [syncSummary, setSyncSummary] = useState<string | null>(null)
+  const [scoreLeft, setScoreLeft]   = useState<number | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -45,12 +46,18 @@ export function TopNav() {
         throw new Error(fetchData.error || "Failed to fetch jobs.")
       }
       setSyncStatus("scoring")
-      const matchRes = await fetch("/api/match", { method: "POST" })
-      if (!matchRes.ok) {
-        const data = await matchRes.json().catch(() => ({}))
-        throw new Error(data.error || "Scoring failed.")
+      for (let i = 0; i < 15; i++) {
+        const matchRes = await fetch("/api/match", { method: "POST" })
+        const matchData = await matchRes.json().catch(() => ({}))
+        if (!matchRes.ok) {
+          throw new Error(matchData.error || "Scoring failed.")
+        }
+        triggerRefresh()
+        const remaining = Number(matchData.remaining ?? 0)
+        setScoreLeft(remaining)
+        if (remaining <= 0) break
       }
-      triggerRefresh()
+      setScoreLeft(null)
       setSyncStatus("done")
       const cc = fetchData.country || "US"
       const summary = `${fetchData.new ?? 0} new jobs from ${cc}`
@@ -63,12 +70,13 @@ export function TopNav() {
       setTimeout(() => setSyncError(null), 8000)
     } finally {
       setSyncing(false)
+      setScoreLeft(null)
     }
   }
 
   const buttonLabel =
     syncStatus === "fetching" ? "Searching..." :
-    syncStatus === "scoring"  ? "Matching to your resume..." :
+    syncStatus === "scoring"  ? (scoreLeft && scoreLeft > 0 ? `Matching... ${scoreLeft} left` : "Matching to your resume...") :
     syncStatus === "done"     ? "Done" :
     "Find new jobs"
 

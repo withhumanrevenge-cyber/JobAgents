@@ -66,7 +66,13 @@ ${candidateContext}`
   }
 }
 
-export async function matchJobsForUser(userId: string): Promise<{ matched: number; skipped: number }> {
+const BATCH_LIMIT = 24
+const CONCURRENCY = 6
+
+export async function matchJobsForUser(
+  userId: string,
+  opts?: { limit?: number },
+): Promise<{ matched: number; skipped: number; remaining: number }> {
   const supabase = createServiceClient()
 
   const { data: profile, error: profileError } = await supabase
@@ -80,6 +86,10 @@ export async function matchJobsForUser(userId: string): Promise<{ matched: numbe
   }
 
   const parsedResume: ParsedResume | null = profile.parsed_resume ?? null
+  const targetRoles: string[] = Array.isArray(profile.target_roles) ? profile.target_roles.filter(Boolean) : []
+  if (!parsedResume && targetRoles.length === 0) {
+    throw new Error("Upload your resume (or set target roles in Settings) so the AI can score jobs against you.")
+  }
 
   const { data: matchedJobIdsData } = await supabase
     .from("matches")
@@ -103,18 +113,19 @@ export async function matchJobsForUser(userId: string): Promise<{ matched: numbe
 
   const { data: unmatchedJobsRaw, error: jobsError } = await jobsQuery
   if (jobsError || !unmatchedJobsRaw || unmatchedJobsRaw.length === 0) {
-    console.log("No unmatched jobs found.")
-    return { matched: 0, skipped: 0 }
+    return { matched: 0, skipped: 0, remaining: 0 }
   }
 
   const perRunCap = PLAN_CONFIG[effectivePlan(profile)].matchPerRun
-  const unmatchedJobs = unmatchedJobsRaw.slice(0, perRunCap)
-  console.log(`Scoring ${unmatchedJobs.length} unmatched jobs with Groq (${FAST_MODEL})...`)
+  const eligible = unmatchedJobsRaw.slice(0, perRunCap)
+  const batchSize = Math.min(opts?.limit ?? BATCH_LIMIT, eligible.length)
+  const batch = eligible.slice(0, batchSize)
+  const remaining = eligible.length - batch.length
 
   let matchedCount = 0
   let skippedCount = 0
 
-  for (const job of unmatchedJobs) {
+  const scoreOne = async (job: Job) => {
     let matchResult: MatchScoreResult
     let aiSucceeded = true
 
@@ -154,9 +165,11 @@ export async function matchJobsForUser(userId: string): Promise<{ matched: numbe
       if (aiSucceeded && passedThreshold) matchedCount++
       else skippedCount++
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 80))
   }
 
-  return { matched: matchedCount, skipped: skippedCount }
+  for (let i = 0; i < batch.length; i += CONCURRENCY) {
+    await Promise.all(batch.slice(i, i + CONCURRENCY).map(scoreOne))
+  }
+
+  return { matched: matchedCount, skipped: skippedCount, remaining }
 }

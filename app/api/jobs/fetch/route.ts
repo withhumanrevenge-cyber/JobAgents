@@ -4,6 +4,9 @@ import { syncAllJobs } from "@/lib/agents/jobFetcher"
 import { effectivePlan, PLAN_CONFIG } from "@/lib/plans"
 import { JobSource } from "@/types"
 
+export const runtime = "nodejs"
+export const maxDuration = 60
+
 export async function POST() {
   try {
     const supabase = await createClient()
