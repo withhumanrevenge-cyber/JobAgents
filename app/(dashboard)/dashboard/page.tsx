@@ -35,7 +35,7 @@ function DashboardHome() {
     if (matches.length > 0 || allJobRows.length > 0) {
       const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
       const inFeed = (m: (typeof matches)[number]) =>
-        m.job?.posted_date ? new Date(m.job.posted_date).getTime() >= cutoff : false
+        m.status !== "skipped" && (m.job?.posted_date ? new Date(m.job.posted_date).getTime() >= cutoff : false)
       Promise.resolve().then(() =>
         setStats({
           totalJobs:        allJobRows.filter(inFeed).length,

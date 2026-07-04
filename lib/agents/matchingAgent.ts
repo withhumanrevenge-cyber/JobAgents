@@ -3,8 +3,10 @@ import { callGroq, parseJsonFromGroq, FAST_MODEL } from "@/lib/groq"
 import { PLAN_CONFIG, effectivePlan } from "@/lib/plans"
 import { Job, Profile, ParsedResume, MatchScoreResult, JobStatus } from "@/types"
 
+type ScorableJob = Pick<Job, "id" | "title" | "company" | "location" | "tags" | "description">
+
 export async function scoreJob(
-  job: Job,
+  job: ScorableJob,
   profile: Profile,
   parsedResume: ParsedResume | null
 ): Promise<MatchScoreResult> {
@@ -96,23 +98,26 @@ export async function matchJobsForUser(
     .select("job_id")
     .eq("user_id", userId)
 
-  const matchedJobIds = (matchedJobIdsData || []).map((m) => m.job_id)
+  const matchedJobIds = new Set((matchedJobIdsData || []).map((m) => m.job_id))
 
   const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   let jobsQuery = supabase
     .from("jobs")
-    .select("*")
+    .select("id, title, company, location, tags, description, posted_date, source")
     .gte("posted_date", monthAgo)
     .order("posted_date", { ascending: false })
+    .limit(600)
   if (!PLAN_CONFIG[effectivePlan(profile)].allSources) {
     jobsQuery = jobsQuery.eq("source", "remotive")
   }
-  if (matchedJobIds.length > 0) {
-    jobsQuery = jobsQuery.not("id", "in", `(${matchedJobIds.join(",")})`)
+
+  const { data: recentJobs, error: jobsError } = await jobsQuery
+  if (jobsError || !recentJobs || recentJobs.length === 0) {
+    return { matched: 0, skipped: 0, remaining: 0 }
   }
 
-  const { data: unmatchedJobsRaw, error: jobsError } = await jobsQuery
-  if (jobsError || !unmatchedJobsRaw || unmatchedJobsRaw.length === 0) {
+  const unmatchedJobsRaw = recentJobs.filter((j) => !matchedJobIds.has(j.id))
+  if (unmatchedJobsRaw.length === 0) {
     return { matched: 0, skipped: 0, remaining: 0 }
   }
 
@@ -125,7 +130,7 @@ export async function matchJobsForUser(
   let matchedCount = 0
   let skippedCount = 0
 
-  const scoreOne = async (job: Job) => {
+  const scoreOne = async (job: ScorableJob) => {
     let matchResult: MatchScoreResult
     try {
       matchResult = await scoreJob(job, profile, parsedResume)

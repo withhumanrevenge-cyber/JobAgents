@@ -92,7 +92,9 @@ export default function JobsPage() {
       {visibleMatches.length === 0 ? (
         <div className="text-center py-14">
           <p className="text-sm text-gray-500">No jobs found</p>
-          <p className="text-xs text-gray-400 mt-1">Try searching for new jobs or clearing your filters.</p>
+          <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">
+            Try <span className="font-medium text-gray-600">Find new jobs</span>, clear your filters, or lower your match threshold in Settings. Jobs scoring below your threshold are under the <span className="font-medium text-gray-600">Below threshold</span> status filter.
+          </p>
         </div>
       ) : viewMode === "table" ? (
         <>
