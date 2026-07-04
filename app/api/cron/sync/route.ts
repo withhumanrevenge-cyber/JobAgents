@@ -28,6 +28,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const startedAt = Date.now()
     const supabase = createServiceClient()
 
     const { data: allProfiles } = await supabase
@@ -44,12 +45,16 @@ export async function GET(request: Request) {
       }
       if (p.target_country) countryPool.add(p.target_country)
     }
-    const queries = queryPool.size > 0 ? Array.from(queryPool) : undefined
-    const countries = countryPool.size > 0 ? Array.from(countryPool) : undefined
+    const queries = queryPool.size > 0 ? Array.from(queryPool).slice(0, 6) : undefined
+    const countries = countryPool.size > 0 ? Array.from(countryPool).slice(0, 3) : undefined
 
-    const fetchStats = await syncAllJobs(queries, countries)
+    const fetchStats = await syncAllJobs(queries, countries, { adzunaPages: 3 })
 
-    await syncAllJobs(DEFAULT_QUERIES, ["IN"], { sources: ["adzuna"] })
+    if (Date.now() - startedAt < 25_000) {
+      const day = Math.floor(Date.now() / 86_400_000)
+      const rotation = [0, 1, 2, 3].map((i) => DEFAULT_QUERIES[(day * 4 + i) % DEFAULT_QUERIES.length])
+      await syncAllJobs(rotation, ["IN"], { sources: ["adzuna"], adzunaPages: 2 })
+    }
 
     const { data: targetProfiles, error: profilesError } = await supabase
       .from("profiles")
@@ -63,12 +68,11 @@ export async function GET(request: Request) {
     const matchStats: Record<string, { matched: number; skipped: number }> = {}
     const emailStats: { sent: number; skipped: number; failed: number } = { sent: 0, skipped: 0, failed: 0 }
 
-    const startedAt = Date.now()
     if (targetProfiles && targetProfiles.length > 0) {
       for (const profile of targetProfiles) {
-        if (Date.now() - startedAt > 40_000) break
+        if (Date.now() - startedAt > 45_000) break
         try {
-          const stats = await matchJobsForUser(profile.user_id, { limit: 10 })
+          const stats = await matchJobsForUser(profile.user_id, { limit: 8 })
           matchStats[profile.user_id] = stats
 
           if (!profile.email_notifications || !profile.email || stats.matched === 0) {

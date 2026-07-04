@@ -161,7 +161,7 @@ export async function fetchRemotiveJobs(query?: string): Promise<Partial<Job>[]>
   }
 }
 
-export async function fetchAdzunaJobs(query = "software engineer", countryCode = DEFAULT_COUNTRY): Promise<Partial<Job>[]> {
+export async function fetchAdzunaJobs(query = "software engineer", countryCode = DEFAULT_COUNTRY, pageCount = 5): Promise<Partial<Job>[]> {
   const appId = process.env.ADZUNA_APP_ID
   const appKey = process.env.ADZUNA_APP_KEY
 
@@ -178,7 +178,7 @@ export async function fetchAdzunaJobs(query = "software engineer", countryCode =
 
   try {
     const encodedQuery = encodeURIComponent(query)
-    const pages = [1, 2, 3, 4, 5]
+    const pages = Array.from({ length: Math.max(1, Math.min(pageCount, 5)) }, (_, i) => i + 1)
     const pageResults = await Promise.all(
       pages.map(async (page) => {
         try {
@@ -298,9 +298,10 @@ export async function fetchJSearchJobs(query = "software engineer", countryCode 
 export async function syncAllJobs(
   queries?: string | string[],
   countries?: string | string[],
-  opts?: { sources?: JobSource[] },
+  opts?: { sources?: JobSource[]; adzunaPages?: number },
 ): Promise<{ fetched: number; new: number; duplicates: number }> {
   const sources = opts?.sources ?? ["remotive", "adzuna", "jsearch"]
+  const adzunaPages = opts?.adzunaPages ?? 5
   const useRemotive = sources.includes("remotive")
   const useAdzuna   = sources.includes("adzuna")
   const useJSearch  = sources.includes("jsearch")
@@ -316,8 +317,8 @@ export async function syncAllJobs(
   const perPairResults = await Promise.all(
     roleQueries.flatMap((q) =>
       countryCodes.map((c) => Promise.all([
-        useAdzuna  ? fetchAdzunaJobs(q, c)  : Promise.resolve([] as Partial<Job>[]),
-        useJSearch ? fetchJSearchJobs(q, c) : Promise.resolve([] as Partial<Job>[]),
+        useAdzuna  ? fetchAdzunaJobs(q, c, adzunaPages) : Promise.resolve([] as Partial<Job>[]),
+        useJSearch ? fetchJSearchJobs(q, c)             : Promise.resolve([] as Partial<Job>[]),
       ]))
     )
   )
