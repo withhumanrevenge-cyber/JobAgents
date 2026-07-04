@@ -182,7 +182,7 @@ export async function fetchAdzunaJobs(query = "software engineer", countryCode =
     const pageResults = await Promise.all(
       pages.map(async (page) => {
         try {
-          const url = `https://api.adzuna.com/v1/api/jobs/${cc.toLowerCase()}/search/${page}?app_id=${appId}&app_key=${appKey}&what=${encodedQuery}&results_per_page=50`
+          const url = `https://api.adzuna.com/v1/api/jobs/${cc.toLowerCase()}/search/${page}?app_id=${appId}&app_key=${appKey}&title_only=${encodedQuery}&results_per_page=50`
           const res = await fetchWithRetry(url, { next: { revalidate: 0 } })
           const data = await res.json()
           return (data.results || []) as AdzunaJob[]

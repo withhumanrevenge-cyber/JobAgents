@@ -28,7 +28,7 @@ export default function JobsPage() {
       const q = `${job.title} ${job.company} ${job.tags.join(" ")}`.toLowerCase()
       const postedAfter = job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : false
       return (searchQuery === "" || q.includes(searchQuery.toLowerCase()))
-        && (statusFilter === "all" || match.status === statusFilter)
+        && (statusFilter === "all" ? match.status !== "skipped" : match.status === statusFilter)
         && (sourceFilter === "all" || job.source === sourceFilter)
         && (jobTypeFilter === "all" || job.job_type === jobTypeFilter)
         && (countryFilter === "all" || job.country === countryFilter)
