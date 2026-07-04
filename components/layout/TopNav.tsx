@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { createClient } from "@/lib/supabase/client"
 import { useDashboardStore } from "@/store/dashboardStore"
+import { COUNTRIES, COUNTRY_NAME } from "@/lib/countries"
 import { Loader2, RefreshCw, Check, AlertTriangle, Menu } from "lucide-react"
 import { spring } from "@/lib/motion"
 
@@ -18,7 +19,7 @@ const PAGE_NAMES: Record<string, string> = {
 export function TopNav() {
   const pathname = usePathname()
   const supabase  = useMemo(() => createClient(), [])
-  const { syncing, setSyncing, triggerRefresh, toggleSidebar } = useDashboardStore()
+  const { syncing, setSyncing, triggerRefresh, toggleSidebar, countryFilter } = useDashboardStore()
   const [userEmail, setUserEmail]   = useState<string | null>(null)
   const [syncStatus, setSyncStatus] = useState<"idle" | "fetching" | "scoring" | "done">("idle")
   const [syncError, setSyncError]   = useState<string | null>(null)
@@ -40,7 +41,14 @@ export function TopNav() {
     setSyncSummary(null)
     setSyncing(true)
     try {
-      const fetchRes = await fetch("/api/jobs/fetch", { method: "POST" })
+      const filterCode = countryFilter !== "all"
+        ? COUNTRIES.find((c) => c.name === countryFilter)?.code
+        : undefined
+      const fetchRes = await fetch("/api/jobs/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(filterCode ? { country: filterCode } : {}),
+      })
       const fetchData = await fetchRes.json().catch(() => ({}))
       if (!fetchRes.ok) {
         throw new Error(fetchData.error || "Failed to fetch jobs.")
@@ -60,7 +68,7 @@ export function TopNav() {
       setScoreLeft(null)
       setSyncStatus("done")
       const cc = fetchData.country || "US"
-      const summary = `${fetchData.new ?? 0} new jobs from ${cc}`
+      const summary = `${fetchData.new ?? 0} new jobs from ${COUNTRY_NAME[cc] || cc}`
       setSyncSummary(summary)
       setTimeout(() => { setSyncStatus("idle"); setSyncSummary(null) }, 6000)
     } catch (err: unknown) {

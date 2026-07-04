@@ -2,12 +2,13 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { syncAllJobs } from "@/lib/agents/jobFetcher"
 import { effectivePlan, PLAN_CONFIG } from "@/lib/plans"
+import { COUNTRIES } from "@/lib/countries"
 import { JobSource } from "@/types"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -31,7 +32,10 @@ export async function POST() {
     const inferred = profile?.parsed_resume?.target_role as string | undefined
     const queries: string | string[] | undefined = explicit.length > 0 ? explicit : inferred
 
-    const country = profile?.target_country || undefined
+    const body = await request.json().catch(() => ({}))
+    const requested = typeof body?.country === "string" ? body.country.toUpperCase() : undefined
+    const override = requested && COUNTRIES.some((c) => c.code === requested) ? requested : undefined
+    const country = override || profile?.target_country || undefined
 
     const plan = effectivePlan(profile ?? {})
     const sources: JobSource[] = PLAN_CONFIG[plan].allSources
@@ -41,7 +45,7 @@ export async function POST() {
     const stats = await syncAllJobs(queries, country, { sources })
     return NextResponse.json({
       ...stats,
-      country: country || "US (default)",
+      country: country || "US",
       queries: Array.isArray(queries) ? queries : queries ? [queries] : ["default"],
     })
   } catch (err: unknown) {

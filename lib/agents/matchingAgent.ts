@@ -67,7 +67,7 @@ ${candidateContext}`
 }
 
 const BATCH_LIMIT = 24
-const CONCURRENCY = 6
+const CONCURRENCY = 4
 
 export async function matchJobsForUser(
   userId: string,
@@ -127,26 +127,15 @@ export async function matchJobsForUser(
 
   const scoreOne = async (job: Job) => {
     let matchResult: MatchScoreResult
-    let aiSucceeded = true
-
     try {
       matchResult = await scoreJob(job, profile, parsedResume)
     } catch (err) {
-      aiSucceeded = false
       console.warn(`Groq scoring failed for job ${job.id}:`, err instanceof Error ? err.message : err)
-      matchResult = {
-        score: 50,
-        reason: "AI scoring unavailable — review this job manually.",
-        matched_skills: [],
-        missing_skills: [],
-      }
+      return
     }
 
     const passedThreshold = matchResult.score >= profile.match_threshold
-    let status: JobStatus = "pending"
-    if (aiSucceeded) {
-      status = passedThreshold ? "reviewed" : "skipped"
-    }
+    const status: JobStatus = passedThreshold ? "reviewed" : "skipped"
 
     const { error: insertError } = await supabase.from("matches").insert({
       user_id: userId,
@@ -162,7 +151,7 @@ export async function matchJobsForUser(
     if (insertError) {
       console.error(`Failed to save match for job ${job.id}:`, insertError.message)
     } else {
-      if (aiSucceeded && passedThreshold) matchedCount++
+      if (passedThreshold) matchedCount++
       else skippedCount++
     }
   }
