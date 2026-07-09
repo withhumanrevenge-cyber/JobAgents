@@ -6,6 +6,8 @@ import { useParams, useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import { createClient } from "@/lib/supabase/client"
 import { MatchScoreBadge } from "@/components/jobs/MatchScoreBadge"
+import { ConsentModal } from "@/components/ui/ConsentModal"
+import { CREDIT_COST } from "@/lib/plans"
 import { ResumeData, Match, InterviewQuestion } from "@/types"
 import { Loader2, Calendar, MapPin, DollarSign, ExternalLink, Briefcase, FileCheck, CheckCircle, MessageSquare, ChevronDown, Zap, Copy, X } from "lucide-react"
 import { calculateDaysAgo } from "@/lib/utils"
@@ -68,6 +70,7 @@ export default function JobDetailPage() {
   const [coverLetter, setCoverLetter]       = useState<string | null>(null)
   const [smartPanelOpen, setSmartPanelOpen] = useState(false)
   const [copied, setCopied]                 = useState<"resume" | "letter" | null>(null)
+  const [consentFor, setConsentFor]         = useState<"tailor" | "smart" | null>(null)
 
   const loadJobDetails = useCallback(async () => {
     try {
@@ -228,7 +231,7 @@ export default function JobDetailPage() {
               <Zap className="w-3.5 h-3.5" /> View Smart Apply
             </button>
           ) : (
-            <button onClick={handleSmartApply} disabled={smartApplying}
+            <button onClick={() => setConsentFor("smart")} disabled={smartApplying}
               className="flex items-center gap-1.5 text-xs font-medium bg-gray-900 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors">
               {smartApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
               {smartApplying ? "Preparing..." : "Smart Apply"}
@@ -333,7 +336,7 @@ export default function JobDetailPage() {
             ) : (
               <div className="space-y-3 pt-1">
                 <p className="text-xs text-gray-500 leading-relaxed">Rewrite your resume to match this job&apos;s requirements and maximize ATS score.</p>
-                <button onClick={handleTailorResume} disabled={tailoring}
+                <button onClick={() => setConsentFor("tailor")} disabled={tailoring}
                   className="w-full bg-gray-900 text-white text-xs font-medium py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
                   {tailoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Briefcase className="w-3.5 h-3.5" />}
                   {tailoring ? "Tailoring..." : "Tailor resume"}
@@ -498,6 +501,28 @@ export default function JobDetailPage() {
           </>
         )}
       </AnimatePresence>
+
+      <ConsentModal
+        open={consentFor !== null}
+        title={consentFor === "smart" ? "Run Smart Apply?" : "Tailor your resume with AI?"}
+        points={consentFor === "smart" ? [
+          "Your resume and this job's description will be processed by our AI service to generate a tailored resume and a personalized cover letter.",
+          `This uses ${CREDIT_COST.smart_apply} credits from your monthly allowance.`,
+          "AI output can contain mistakes — review both documents before applying.",
+        ] : [
+          "Your resume and this job's description will be processed by our AI service to generate a tailored version.",
+          `This uses ${CREDIT_COST.tailor} credits from your monthly allowance.`,
+          "AI output can contain mistakes — review the result before sending it to an employer.",
+        ]}
+        confirmLabel="I agree — continue"
+        onConfirm={() => {
+          const action = consentFor
+          setConsentFor(null)
+          if (action === "smart") handleSmartApply()
+          else if (action === "tailor") handleTailorResume()
+        }}
+        onCancel={() => setConsentFor(null)}
+      />
     </div>
   )
 }
