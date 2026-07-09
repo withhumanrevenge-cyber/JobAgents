@@ -42,12 +42,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# AI Assistant metadata
+# local tool config
 .claude/
-.copilot/
-.cursor/
-.cursorrules
-
-
-# OneDrive conflict-copy artifacts (legacy)
-*-DuckYou*
