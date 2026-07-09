@@ -44,10 +44,3 @@ next-env.d.ts
 
 # AI Assistant metadata
 .claude/
-.copilot/
-.cursor/
-.cursorrules
-
-
-# OneDrive conflict-copy artifacts (legacy)
-*-DuckYou*
