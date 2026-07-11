@@ -68,7 +68,7 @@ ${candidateContext}`
   }
 }
 
-const BATCH_LIMIT = 24
+const BATCH_LIMIT = 8
 const CONCURRENCY = 4
 
 export async function matchJobsForUser(
