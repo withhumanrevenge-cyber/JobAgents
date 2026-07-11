@@ -59,12 +59,25 @@ function DashboardHome() {
         const d = await fetchRes.json().catch(() => ({}))
         throw new Error(d.error || "Failed to fetch jobs.")
       }
-      for (let i = 0; i < 15; i++) {
-        const matchRes = await fetch("/api/match", { method: "POST" })
-        const d = await matchRes.json().catch(() => ({}))
-        if (!matchRes.ok) {
-          throw new Error(d.error || "Scoring failed.")
+      let consecutiveFailures = 0
+      for (let i = 0; i < 40; i++) {
+        let matchRes: Response
+        let d: { remaining?: number; error?: string }
+        try {
+          matchRes = await fetch("/api/match", { method: "POST" })
+          d = await matchRes.json()
+        } catch {
+          consecutiveFailures++
+          if (consecutiveFailures >= 3) break
+          continue
         }
+        if (!matchRes.ok) {
+          if (matchRes.status === 400) throw new Error(d?.error || "Scoring failed.")
+          consecutiveFailures++
+          if (consecutiveFailures >= 3) break
+          continue
+        }
+        consecutiveFailures = 0
         triggerRefresh()
         if (Number(d.remaining ?? 0) <= 0) break
       }

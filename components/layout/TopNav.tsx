@@ -54,12 +54,30 @@ export function TopNav() {
         throw new Error(fetchData.error || "Failed to fetch jobs.")
       }
       setSyncStatus("scoring")
-      for (let i = 0; i < 15; i++) {
-        const matchRes = await fetch("/api/match", { method: "POST" })
-        const matchData = await matchRes.json().catch(() => ({}))
-        if (!matchRes.ok) {
-          throw new Error(matchData.error || "Scoring failed.")
+      let totalScored = 0
+      let consecutiveFailures = 0
+      for (let i = 0; i < 40; i++) {
+        let matchRes: Response
+        let matchData: { matched?: number; skipped?: number; remaining?: number; error?: string }
+        try {
+          matchRes = await fetch("/api/match", { method: "POST" })
+          matchData = await matchRes.json()
+        } catch {
+          // Network hiccup or a batch that got killed by the platform timeout — a handful of
+          // jobs may still have been scored server-side before the kill. Don't treat this as a
+          // total failure; retry a couple of times before giving up.
+          consecutiveFailures++
+          if (consecutiveFailures >= 3) break
+          continue
         }
+        if (!matchRes.ok) {
+          if (matchRes.status === 400) throw new Error(matchData?.error || "Scoring failed.")
+          consecutiveFailures++
+          if (consecutiveFailures >= 3) break
+          continue
+        }
+        consecutiveFailures = 0
+        totalScored += (matchData.matched ?? 0) + (matchData.skipped ?? 0)
         triggerRefresh()
         const remaining = Number(matchData.remaining ?? 0)
         setScoreLeft(remaining)
@@ -68,7 +86,9 @@ export function TopNav() {
       setScoreLeft(null)
       setSyncStatus("done")
       const cc = fetchData.country || "US"
-      const summary = `${fetchData.new ?? 0} new jobs from ${COUNTRY_NAME[cc] || cc}`
+      const summary = totalScored > 0
+        ? `${fetchData.new ?? 0} new jobs from ${COUNTRY_NAME[cc] || cc} · ${totalScored} scored`
+        : `${fetchData.new ?? 0} new jobs from ${COUNTRY_NAME[cc] || cc}`
       setSyncSummary(summary)
       setTimeout(() => { setSyncStatus("idle"); setSyncSummary(null) }, 6000)
     } catch (err: unknown) {
