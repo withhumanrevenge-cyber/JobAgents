@@ -92,10 +92,9 @@ $$;
 create trigger profiles_updated_at before update on profiles
   for each row execute procedure update_updated_at();
 
--- STORAGE (run these in Supabase dashboard under Storage > Policies)
--- create policy "Allow public read access" on storage.objects for select using (bucket_id = 'resumes');
--- create policy "Allow authenticated uploads" on storage.objects for insert to authenticated with check (bucket_id = 'resumes');
--- create policy "Allow authenticated updates" on storage.objects for update to authenticated using (bucket_id = 'resumes');
+-- STORAGE — see supabase/migrations/005_storage_security.sql for the current policies.
+-- Never add a broad SELECT policy on the resumes bucket: it lets clients list every user's
+-- resume. Public object URLs work without one. Policies are scoped to the owner's folder.
 
 -- ADD COLUMNS TO EXISTING PROFILES TABLE (run this if table already exists)
 -- alter table profiles add column if not exists email text;
