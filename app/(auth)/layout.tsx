@@ -1,6 +1,11 @@
 import React from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
 import { Reveal } from "@/components/motion/Reveal"
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+}
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

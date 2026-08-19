@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const plan = effectivePlan(profile ?? {})
     const sources: JobSource[] = PLAN_CONFIG[plan].allSources
       ? ["remotive", "adzuna", "jsearch"]
-      : ["remotive"]
+      : ["adzuna"]
 
     const stats = await syncAllJobs(queries, country, { sources })
     return NextResponse.json({
