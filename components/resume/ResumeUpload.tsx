@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react"
 import { Upload, FileText, CheckCircle, Loader2, AlertTriangle } from "lucide-react"
 import { ParsedResume } from "@/types"
+import { openStoredResume } from "@/lib/resume"
 
 interface ResumeUploadProps {
   onParsed?: (resume: ParsedResume, url: string) => void
@@ -140,7 +141,13 @@ export function ResumeUpload({ onParsed, compact = false, existingResumeUrl }: R
               {parsed.skills.length > 12 && <span className="text-[9px] text-gray-400">+{parsed.skills.length - 12}</span>}
             </div>
           </div>
-          {resumeUrl && <a href={resumeUrl} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-gray-900">View PDF →</a>}
+          {resumeUrl && (
+            <button type="button"
+              onClick={async () => { const r = await openStoredResume(); if (!r.ok) setError(r.error || "Could not open resume.") }}
+              className="text-[10px] text-gray-500 hover:text-gray-900">
+              View PDF →
+            </button>
+          )}
         </div>
       )}
     </div>
