@@ -17,14 +17,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!profile?.is_admin) redirect("/dashboard")
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <header className="border-b border-gray-200 bg-white">
+    <div className="min-h-screen bg-muted font-sans">
+      <header className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-gray-900">JobAgent</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider bg-gray-900 text-white px-1.5 py-0.5 rounded">Admin</span>
+            <span className="text-sm font-semibold text-foreground">JobAgent</span>
+            <span className="text-[10px] font-medium uppercase tracking-wider bg-primary text-primary-foreground px-1.5 py-0.5 rounded">Admin</span>
           </div>
-          <Link href="/dashboard" className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors">
+          <Link href="/dashboard" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to app
           </Link>
         </div>

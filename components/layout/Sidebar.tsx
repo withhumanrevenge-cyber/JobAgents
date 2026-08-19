@@ -63,22 +63,22 @@ export function Sidebar() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden fixed inset-0 z-40 bg-gray-900/40"
+            className="lg:hidden fixed inset-0 z-40 bg-primary/40"
             aria-hidden="true"
           />
         )}
       </AnimatePresence>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-white border-r border-gray-100 transition-transform duration-300 ease-out
+        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-card border-r border-border/60 transition-transform duration-300 ease-out
           lg:static lg:z-auto lg:w-52 lg:translate-x-0 lg:shrink-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-      <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100">
-        <span className="text-sm font-semibold text-gray-900">JobAgent</span>
+      <div className="h-14 flex items-center justify-between px-4 border-b border-border/60">
+        <span className="text-sm font-semibold text-foreground">JobAgent</span>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="lg:hidden -mr-1 p-1.5 text-gray-400 hover:text-gray-900 rounded-md transition-colors"
+          className="lg:hidden -mr-1 p-1.5 text-muted-foreground hover:text-foreground rounded-md transition-colors"
           aria-label="Close menu"
         >
           <X className="w-4 h-4" />
@@ -94,47 +94,47 @@ export function Sidebar() {
               href={href}
               className={`relative flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
                 active
-                  ? "text-gray-900 font-medium"
-                  : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
               {active && !prefersReduced && (
                 <motion.span
                   layoutId="sidebar-active-pill"
-                  className="absolute inset-0 bg-gray-100 rounded-md -z-10"
+                  className="absolute inset-0 bg-accent rounded-md -z-10"
                   transition={spring}
                 />
               )}
               {active && prefersReduced && (
-                <span className="absolute inset-0 bg-gray-100 rounded-md -z-10" />
+                <span className="absolute inset-0 bg-accent rounded-md -z-10" />
               )}
-              <Icon className={`w-4 h-4 shrink-0 relative ${active ? "text-gray-900" : "text-gray-400"}`} />
+              <Icon className={`w-4 h-4 shrink-0 relative ${active ? "text-foreground" : "text-muted-foreground"}`} />
               <span className="relative">{label}</span>
             </Link>
           )
         })}
       </nav>
 
-      <div className="px-2 py-3 border-t border-gray-100 space-y-0.5">
+      <div className="px-2 py-3 border-t border-border/60 space-y-0.5">
         {isRecruiter && (
           <Link href="/hire"
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-            <Building2 className="w-4 h-4 shrink-0 text-gray-400" />
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <Building2 className="w-4 h-4 shrink-0 text-muted-foreground" />
             Hiring dashboard
           </Link>
         )}
         {isAdmin && (
           <Link href="/admin"
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-            <ShieldCheck className="w-4 h-4 shrink-0 text-gray-400" />
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <ShieldCheck className="w-4 h-4 shrink-0 text-muted-foreground" />
             Admin
           </Link>
         )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
-          <LogOut className="w-4 h-4 shrink-0 text-gray-400" />
+          <LogOut className="w-4 h-4 shrink-0 text-muted-foreground" />
           Sign out
         </button>
       </div>

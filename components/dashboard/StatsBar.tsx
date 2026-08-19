@@ -18,9 +18,9 @@ export function StatsBar({ stats }: StatsBarProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {CARDS.map(({ key, label }) => (
-        <div key={key} className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-2xl font-semibold text-gray-900 tabular-nums">{stats[key]}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{label}</p>
+        <div key={key} className="bg-card border border-border rounded-lg p-4">
+          <p className="text-2xl font-semibold text-foreground tabular-nums">{stats[key]}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
         </div>
       ))}
     </div>

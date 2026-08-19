@@ -37,15 +37,15 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
     return Array.from(set).sort()
   }, [matches, countryFilter])
 
-  const selectCls = "bg-white border border-gray-200 text-base sm:text-sm text-gray-600 rounded-md py-1.5 px-3 focus:outline-none focus:border-gray-900 cursor-pointer hover:border-gray-400 transition-colors"
+  const selectCls = "bg-card border border-border text-base sm:text-sm text-foreground/80 rounded-md py-1.5 px-3 focus:outline-none focus:border-foreground cursor-pointer hover:border-foreground/40 transition-colors"
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1 bg-white border border-gray-200 rounded-md p-1 w-fit">
+      <div className="flex gap-1 bg-card border border-border rounded-md p-1 w-fit">
         {TYPE_TABS.map((t) => (
           <button key={t.value} onClick={() => setJobTypeFilter(t.value)}
             className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-              jobTypeFilter === t.value ? "bg-gray-900 text-white" : "text-gray-500 hover:text-gray-900"
+              jobTypeFilter === t.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}>
             {t.label}
           </button>
@@ -54,16 +54,16 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
 
       <div className="flex flex-col md:flex-row md:flex-wrap gap-2 items-stretch md:items-center">
         <div className="relative flex-1 w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search jobs..."
-            className="w-full bg-white border border-gray-200 rounded-md py-1.5 pl-9 pr-3 text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-gray-900 transition-colors" />
+            className="w-full bg-card border border-border rounded-md py-1.5 pl-9 pr-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground transition-colors" />
         </div>
 
         <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
           {countries.length > 0 && (
             <div className="relative">
-              <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+              <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
               <select value={countryFilter} onChange={e => setCountryFilter(e.target.value)}
                 className={`${selectCls} pl-7`}>
                 <option value="all">All countries</option>
@@ -80,7 +80,7 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
           )}
 
           <div className="relative">
-            <GraduationCap className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            <GraduationCap className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
             <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value as ExperienceLevel | "all")} className={`${selectCls} pl-7`}>
               <option value="all">All levels</option>
               <option value="entry">{EXPERIENCE_LABEL.entry}</option>
@@ -92,7 +92,7 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
           </div>
 
           <div className="relative">
-            <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
             <select value={timeFilter} onChange={e => setTimeFilter(e.target.value as TimeFilter)} className={`${selectCls} pl-7`}>
               <option value="24h">{TIME_LABEL["24h"]}</option>
               <option value="7d">{TIME_LABEL["7d"]}</option>
@@ -119,7 +119,7 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
             <option value="jsearch">{SOURCE_LABEL.jsearch}</option>
           </select>
 
-          <button onClick={resetFilters} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-900 px-2 py-1.5 transition-colors">
+          <button onClick={resetFilters} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors">
             <RotateCcw className="w-3 h-3" /> Reset
           </button>
         </div>

@@ -27,18 +27,18 @@ export function ActivityFeed({ recentMatches }: ActivityFeedProps) {
     })
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <p className="text-xs text-gray-400 mb-4">Recent activity</p>
+    <div className="bg-card border border-border rounded-lg p-4">
+      <p className="text-xs text-muted-foreground mb-4">Recent activity</p>
       {activities.length === 0 ? (
-        <p className="text-xs text-gray-400 py-4 text-center">No activity yet. Search for jobs to get started.</p>
+        <p className="text-xs text-muted-foreground py-4 text-center">No activity yet. Search for jobs to get started.</p>
       ) : (
         <div className="space-y-3">
           {activities.map(({ id, text, time }) => (
-            <div key={id} className="flex gap-3 pb-3 border-b border-gray-100 last:border-0 last:pb-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 shrink-0" />
+            <div key={id} className="flex gap-3 pb-3 border-b border-border/60 last:border-0 last:pb-0">
+              <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 mt-1.5 shrink-0" />
               <div className="min-w-0">
-                <p className="text-xs text-gray-700 leading-relaxed">{text}</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">{time}</p>
+                <p className="text-xs text-foreground/90 leading-relaxed">{text}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{time}</p>
               </div>
             </div>
           ))}

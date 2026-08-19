@@ -15,7 +15,7 @@ export default function DashboardError({ error, reset }: ErrorProps) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center font-sans">
-      <div className="bg-white border border-red-200 rounded-2xl p-8 max-w-md shadow-xl space-y-4">
+      <div className="bg-card border border-red-200 rounded-2xl p-8 max-w-md shadow-xl space-y-4">
         <div className="h-12 w-12 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-500 mx-auto">
           <AlertCircle className="w-6 h-6" />
         </div>

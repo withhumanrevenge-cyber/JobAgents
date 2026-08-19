@@ -46,7 +46,7 @@ export function TagInput({ value, onChange, placeholder = "Type a role and press
     <div>
       <div
         onClick={() => inputRef.current?.focus()}
-        className="flex flex-wrap gap-1.5 border border-gray-200 rounded-md px-2 py-2 min-h-[42px] cursor-text focus-within:border-gray-900 transition-colors"
+        className="flex flex-wrap gap-1.5 border border-border rounded-md px-2 py-2 min-h-[42px] cursor-text focus-within:border-foreground transition-colors"
       >
         <AnimatePresence initial={false}>
           {value.map((tag) => (
@@ -57,13 +57,13 @@ export function TagInput({ value, onChange, placeholder = "Type a role and press
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={spring}
-              className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-xs text-gray-800 pl-2 pr-1 py-1 rounded"
+              className="inline-flex items-center gap-1 bg-accent border border-border text-xs text-foreground pl-2 pr-1 py-1 rounded"
             >
               {tag}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); removeTag(tag) }}
-                className="w-3.5 h-3.5 rounded hover:bg-gray-300 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors"
+                className="w-3.5 h-3.5 rounded hover:bg-muted-foreground/30 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={`Remove ${tag}`}
               >
                 <X className="w-2.5 h-2.5" />
@@ -80,10 +80,10 @@ export function TagInput({ value, onChange, placeholder = "Type a role and press
           onBlur={() => draft && addTag(draft)}
           disabled={atMax}
           placeholder={value.length === 0 ? placeholder : atMax ? `Max ${maxTags} reached` : "Add another..."}
-          className="flex-1 min-w-[120px] bg-transparent text-base sm:text-xs text-gray-900 placeholder-gray-400 outline-none disabled:cursor-not-allowed"
+          className="flex-1 min-w-[120px] bg-transparent text-base sm:text-xs text-foreground placeholder:text-muted-foreground outline-none disabled:cursor-not-allowed"
         />
       </div>
-      {helperText && <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">{helperText}</p>}
+      {helperText && <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">{helperText}</p>}
     </div>
   )
 }

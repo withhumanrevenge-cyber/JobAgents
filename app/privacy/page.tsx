@@ -11,7 +11,7 @@ const CONTACT = "withhumanrevenge@gmail.com"
 export default function PrivacyPage() {
   return (
     <LegalShell title="Privacy Policy" updated="June 28, 2026">
-      <p className="text-sm text-gray-600 leading-relaxed">
+      <p className="text-sm text-foreground/80 leading-relaxed">
         This Privacy Policy explains how JobAgent (&quot;we&quot;, &quot;us&quot;) collects, uses, and protects your
         information when you use our website and services. By using JobAgent, you agree to this policy.
       </p>
@@ -60,7 +60,7 @@ export default function PrivacyPage() {
         <p>
           We keep your data for as long as your account is active. You can edit your profile and re-upload your resume
           at any time in Settings. To delete your account and associated data, email us at{" "}
-          <a href={`mailto:${CONTACT}`} className="text-gray-900 underline underline-offset-2">{CONTACT}</a> and we will
+          <a href={`mailto:${CONTACT}`} className="text-foreground underline underline-offset-2">{CONTACT}</a> and we will
           remove it within 30 days.
         </p>
       </LegalSection>
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
       <LegalSection heading="11. Contact">
         <p>
           Questions about your privacy? Email{" "}
-          <a href={`mailto:${CONTACT}`} className="text-gray-900 underline underline-offset-2">{CONTACT}</a>.
+          <a href={`mailto:${CONTACT}`} className="text-foreground underline underline-offset-2">{CONTACT}</a>.
         </p>
       </LegalSection>
     </LegalShell>

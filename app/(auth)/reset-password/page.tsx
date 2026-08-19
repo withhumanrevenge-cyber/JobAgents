@@ -27,33 +27,33 @@ export default function ResetPasswordPage() {
     else { setDone(true); setTimeout(() => router.push("/dashboard"), 2500) }
   }
 
-  const inputCls = "w-full border border-gray-200 rounded-md px-3 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-900 focus:outline-none transition-colors"
+  const inputCls = "w-full border border-border rounded-md px-3 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none transition-colors"
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8">
-      <h1 className="text-base font-semibold text-gray-900 mb-1">Set new password</h1>
-      <p className="text-sm text-gray-500 mb-6">Choose a strong password for your account.</p>
+    <div className="bg-card border border-border rounded-lg p-6 sm:p-8">
+      <h1 className="text-base font-semibold text-foreground mb-1">Set new password</h1>
+      <p className="text-sm text-muted-foreground mb-6">Choose a strong password for your account.</p>
 
       {done ? (
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <CheckCircle className="w-8 h-8 text-green-500" />
-          <p className="text-sm text-gray-600">Password updated. Redirecting...</p>
+          <p className="text-sm text-foreground/80">Password updated. Redirecting...</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">New password</label>
+            <label className="block text-xs text-muted-foreground mb-1.5">New password</label>
             <input type="password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters" className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Confirm password</label>
+            <label className="block text-xs text-muted-foreground mb-1.5">Confirm password</label>
             <input type="password" required value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Repeat password" className={inputCls} />
           </div>
 
           {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
 
           <button type="submit" disabled={loading}
-            className="w-full bg-gray-900 text-white text-sm font-medium py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+            className="w-full bg-primary text-primary-foreground text-sm font-medium py-2 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {loading ? "Updating..." : "Update password"}
           </button>

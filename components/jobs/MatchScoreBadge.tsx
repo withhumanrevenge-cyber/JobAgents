@@ -17,7 +17,7 @@ export function MatchScoreBadge({ score, size = "md" }: MatchScoreBadgeProps) {
   }[size]
 
   if (score < 0) {
-    return <span className={`font-medium border border-gray-200 rounded-md bg-gray-50 text-gray-400 ${s}`}>—</span>
+    return <span className={`font-medium border border-border rounded-md bg-muted text-muted-foreground ${s}`}>—</span>
   }
 
   const cls =

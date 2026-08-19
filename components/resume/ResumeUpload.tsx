@@ -73,36 +73,36 @@ export function ResumeUpload({ onParsed, compact = false, existingResumeUrl }: R
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3 cursor-pointer transition-colors ${
-          dragging  ? "border-gray-400 bg-gray-50" :
-          uploading ? "border-gray-200 bg-gray-50 cursor-not-allowed" :
+          dragging  ? "border-border bg-muted" :
+          uploading ? "border-border bg-muted cursor-not-allowed" :
           parsed    ? "border-green-300 bg-green-50" :
-          "border-gray-200 bg-white hover:border-gray-400"
+          "border-border bg-card hover:border-foreground/40"
         }`}
       >
         {uploading ? (
           <>
-            <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
+            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
             <div className="text-center">
-              <p className="text-sm text-gray-700">Parsing resume...</p>
-              <p className="text-xs text-gray-400 mt-0.5">Extracting skills, experience &amp; education</p>
+              <p className="text-sm text-foreground/90">Parsing resume...</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Extracting skills, experience &amp; education</p>
             </div>
           </>
         ) : parsed ? (
           <>
             <CheckCircle className="w-6 h-6 text-green-500" />
             <div className="text-center">
-              <p className="text-sm text-gray-700">Resume parsed</p>
-              <p className="text-xs text-gray-400 mt-0.5">Click to replace</p>
+              <p className="text-sm text-foreground/90">Resume parsed</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Click to replace</p>
             </div>
           </>
         ) : (
           <>
-            <div className="w-10 h-10 rounded-md bg-gray-100 flex items-center justify-center">
-              <Upload className="w-5 h-5 text-gray-500" />
+            <div className="w-10 h-10 rounded-md bg-accent flex items-center justify-center">
+              <Upload className="w-5 h-5 text-muted-foreground" />
             </div>
             <div className="text-center">
-              <p className="text-sm text-gray-700">Drop your resume or <span className="text-gray-900 underline underline-offset-2">browse</span></p>
-              <p className="text-xs text-gray-400 mt-0.5">PDF only · Max 10MB</p>
+              <p className="text-sm text-foreground/90">Drop your resume or <span className="text-foreground underline underline-offset-2">browse</span></p>
+              <p className="text-xs text-muted-foreground mt-0.5">PDF only · Max 10MB</p>
             </div>
           </>
         )}
@@ -117,34 +117,34 @@ export function ResumeUpload({ onParsed, compact = false, existingResumeUrl }: R
       )}
 
       {parsed && (
-        <div className="bg-white border border-gray-200 rounded-md p-3 space-y-2.5">
+        <div className="bg-card border border-border rounded-md p-3 space-y-2.5">
           <div className="flex items-center gap-2">
-            <FileText className="w-3.5 h-3.5 text-gray-400" />
-            <p className="text-xs font-medium text-gray-700">Parsed data</p>
+            <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+            <p className="text-xs font-medium text-foreground/90">Parsed data</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <p className="text-[9px] text-gray-400 uppercase mb-0.5">Target role</p>
-              <p className="text-xs text-gray-800">{parsed.target_role || "—"}</p>
+              <p className="text-[9px] text-muted-foreground uppercase mb-0.5">Target role</p>
+              <p className="text-xs text-foreground">{parsed.target_role || "—"}</p>
             </div>
             <div>
-              <p className="text-[9px] text-gray-400 uppercase mb-0.5">Experience</p>
-              <p className="text-xs text-gray-800">{parsed.years_experience} years</p>
+              <p className="text-[9px] text-muted-foreground uppercase mb-0.5">Experience</p>
+              <p className="text-xs text-foreground">{parsed.years_experience} years</p>
             </div>
           </div>
           <div>
-            <p className="text-[9px] text-gray-400 uppercase mb-1">Skills ({parsed.skills.length})</p>
+            <p className="text-[9px] text-muted-foreground uppercase mb-1">Skills ({parsed.skills.length})</p>
             <div className="flex flex-wrap gap-1">
               {parsed.skills.slice(0, 12).map((skill, idx) => (
-                <span key={idx} className="bg-gray-50 border border-gray-200 text-[9px] text-gray-600 px-2 py-0.5 rounded">{skill}</span>
+                <span key={idx} className="bg-muted border border-border text-[9px] text-foreground/80 px-2 py-0.5 rounded">{skill}</span>
               ))}
-              {parsed.skills.length > 12 && <span className="text-[9px] text-gray-400">+{parsed.skills.length - 12}</span>}
+              {parsed.skills.length > 12 && <span className="text-[9px] text-muted-foreground">+{parsed.skills.length - 12}</span>}
             </div>
           </div>
           {resumeUrl && (
             <button type="button"
               onClick={async () => { const r = await openStoredResume(); if (!r.ok) setError(r.error || "Could not open resume.") }}
-              className="text-[10px] text-gray-500 hover:text-gray-900">
+              className="text-[10px] text-muted-foreground hover:text-foreground">
               View PDF →
             </button>
           )}

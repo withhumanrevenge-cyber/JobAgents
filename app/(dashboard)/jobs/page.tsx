@@ -46,21 +46,21 @@ export default function JobsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   const upgradeBanner = lockedCount > 0 && (
-    <div className="bg-gray-900 text-white rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="bg-primary text-primary-foreground rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div className="flex items-start gap-2.5">
-        <Lock className="w-4 h-4 mt-0.5 shrink-0 text-gray-300" />
+        <Lock className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground/60" />
         <div>
           <p className="text-sm font-medium">{lockedCount} more {lockedCount === 1 ? "match is" : "matches are"} locked</p>
-          <p className="text-xs text-gray-400 mt-0.5">Your {PLAN_CONFIG[plan].label} plan shows the top {cap}. Upgrade to see every match.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Your {PLAN_CONFIG[plan].label} plan shows the top {cap}. Upgrade to see every match.</p>
         </div>
       </div>
-      <Link href="/settings" className="bg-white text-gray-900 text-xs font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors shrink-0">
+      <Link href="/settings" className="bg-card text-foreground text-xs font-medium px-3 py-1.5 rounded-md hover:bg-accent transition-colors shrink-0">
         Upgrade
       </Link>
     </div>
@@ -70,18 +70,18 @@ export default function JobsPage() {
     <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-5">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Jobs</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <h1 className="text-lg font-semibold text-foreground">Jobs</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {visibleMatches.length} shown{lockedCount > 0 ? ` · ${lockedCount} locked` : ""}
           </p>
         </div>
-        <div className="flex gap-1 border border-gray-200 rounded-md p-0.5">
+        <div className="flex gap-1 border border-border rounded-md p-0.5">
           <button onClick={() => setViewMode("table")}
-            className={`p-1.5 rounded transition-colors ${viewMode === "table" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-900"}`}>
+            className={`p-1.5 rounded transition-colors ${viewMode === "table" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <List className="w-4 h-4" />
           </button>
           <button onClick={() => setViewMode("grid")}
-            className={`p-1.5 rounded transition-colors ${viewMode === "grid" ? "bg-gray-900 text-white" : "text-gray-400 hover:text-gray-900"}`}>
+            className={`p-1.5 rounded transition-colors ${viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
             <LayoutGrid className="w-4 h-4" />
           </button>
         </div>
@@ -91,9 +91,9 @@ export default function JobsPage() {
 
       {visibleMatches.length === 0 ? (
         <div className="text-center py-14">
-          <p className="text-sm text-gray-500">No jobs found</p>
-          <p className="text-xs text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">
-            Try <span className="font-medium text-gray-600">Find new jobs</span>, clear your filters, or lower your match threshold in Settings. Jobs scoring below your threshold are under the <span className="font-medium text-gray-600">Below threshold</span> status filter.
+          <p className="text-sm text-muted-foreground">No jobs found</p>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
+            Try <span className="font-medium text-foreground/80">Find new jobs</span>, clear your filters, or lower your match threshold in Settings. Jobs scoring below your threshold are under the <span className="font-medium text-foreground/80">Below threshold</span> status filter.
           </p>
         </div>
       ) : viewMode === "table" ? (
