@@ -9,6 +9,7 @@ import { ResumeUpload } from "@/components/resume/ResumeUpload"
 import { TagInput } from "@/components/ui/TagInput"
 import { BillingPanel } from "@/components/billing/BillingPanel"
 import { AccountTypeCard } from "@/components/settings/AccountTypeCard"
+import { openStoredResume } from "@/lib/resume"
 import { ParsedResume } from "@/types"
 import { Reveal } from "@/components/motion/Reveal"
 import { spring } from "@/lib/motion"
@@ -243,7 +244,12 @@ export default function SettingsPage() {
                   {parsedAt && <span className="text-[10px] font-normal text-green-600">· {calculateDaysAgo(parsedAt).toLowerCase()}</span>}
                 </p>
                 <p className="text-[10px] text-green-600">{parsedResume.target_role} · {parsedResume.years_experience}y · {parsedResume.skills.length} skills</p>
-                {resumeUrl && <a href={resumeUrl} target="_blank" rel="noreferrer" className="text-[10px] text-gray-500 hover:text-gray-900">View PDF →</a>}
+                {resumeUrl && (
+                  <button type="button" onClick={() => openStoredResume()}
+                    className="text-[10px] text-gray-500 hover:text-gray-900">
+                    View PDF →
+                  </button>
+                )}
               </div>
             )}
 

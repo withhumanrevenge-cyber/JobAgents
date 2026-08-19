@@ -87,8 +87,6 @@ export async function POST(request: Request) {
 
     if (uploadError) console.warn("Storage upload failed:", uploadError.message)
 
-    const publicUrl = supabase.storage.from("resumes").getPublicUrl(filePath).data.publicUrl
-
     const rawText = await callGroq(
       `Extract all information from this resume:\n\n${resumeText.slice(0, 6000)}`,
       SYSTEM_PROMPT,
@@ -108,14 +106,14 @@ export async function POST(request: Request) {
       .update({
         parsed_resume: parsedResume,
         resume_parsed_at: new Date().toISOString(),
-        base_resume_url: publicUrl,
+        base_resume_url: filePath,
         full_name: parsedResume.name || undefined,
         email: parsedResume.email || undefined,
         phone: parsedResume.phone || undefined,
       })
       .eq("user_id", user.id)
 
-    return NextResponse.json({ parsed_resume: parsedResume, resume_url: publicUrl })
+    return NextResponse.json({ parsed_resume: parsedResume, resume_url: filePath })
   } catch (err: unknown) {
     console.error("Resume parse error:", err)
     const msg = err instanceof Error ? err.message : "Failed to parse resume."
