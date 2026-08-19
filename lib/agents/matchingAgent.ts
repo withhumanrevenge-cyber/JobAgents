@@ -108,7 +108,7 @@ export async function matchJobsForUser(
     .order("posted_date", { ascending: false })
     .limit(600)
   if (!PLAN_CONFIG[effectivePlan(profile)].allSources) {
-    jobsQuery = jobsQuery.eq("source", "remotive")
+    jobsQuery = jobsQuery.eq("source", "adzuna")
   }
 
   const { data: recentJobs, error: jobsError } = await jobsQuery
