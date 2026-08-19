@@ -32,7 +32,7 @@ interface UserRow {
 }
 
 const PLAN_TONE: Record<string, string> = {
-  free: "bg-gray-100 text-gray-600",
+  free: "bg-accent text-foreground/80",
   pro: "bg-blue-50 text-blue-700 border border-blue-200",
   premium: "bg-amber-50 text-amber-700 border border-amber-200",
 }
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+    return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
   }
 
   const numFmt = (n: number) => n.toLocaleString()
@@ -92,8 +92,8 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-gray-900">Admin overview</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Users, tiers, credit usage, and AI consumption.</p>
+        <h1 className="text-lg font-semibold text-foreground">Admin overview</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Users, tiers, credit usage, and AI consumption.</p>
       </div>
 
       {overview && (
@@ -106,41 +106,41 @@ export default function AdminDashboard() {
       )}
 
       <div>
-        <p className="text-xs text-gray-400 mb-3">Users ({users.length})</p>
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <p className="text-xs text-muted-foreground mb-3">Users ({users.length})</p>
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-border/60">
                   {["User", "Tier", "Credits used", "Smart Apply", "Tailor", "Interview", "Tokens", "Tier / Grant"].map((h) => (
-                    <th key={h} className="py-3 px-4 text-[10px] font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                    <th key={h} className="py-3 px-4 text-[10px] font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {users.map((u) => (
-                  <tr key={u.user_id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={u.user_id} className="hover:bg-muted transition-colors">
                     <td className="py-3 px-4">
-                      <p className="text-sm font-medium text-gray-900">{u.full_name || "—"}</p>
-                      <p className="text-xs text-gray-400">{u.email || u.user_id.slice(0, 8)}</p>
+                      <p className="text-sm font-medium text-foreground">{u.full_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{u.email || u.user_id.slice(0, 8)}</p>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${PLAN_TONE[u.plan] ?? PLAN_TONE.free}`}>
                         {PLAN_LABEL[(u.plan as Plan)] ?? u.plan}{u.is_admin ? " · admin" : ""}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.credits}</td>
-                    <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.smart_apply}</td>
-                    <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.tailor}</td>
-                    <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.interview}</td>
-                    <td className="py-3 px-4 text-xs text-gray-600 tabular-nums">{u.tokens.toLocaleString()}</td>
+                    <td className="py-3 px-4 text-xs text-foreground/80 tabular-nums">{u.credits}</td>
+                    <td className="py-3 px-4 text-xs text-foreground/80 tabular-nums">{u.smart_apply}</td>
+                    <td className="py-3 px-4 text-xs text-foreground/80 tabular-nums">{u.tailor}</td>
+                    <td className="py-3 px-4 text-xs text-foreground/80 tabular-nums">{u.interview}</td>
+                    <td className="py-3 px-4 text-xs text-foreground/80 tabular-nums">{u.tokens.toLocaleString()}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">
                         <select
                           value={u.plan}
                           disabled={savingId === u.user_id}
                           onChange={(e) => setPlan(u.user_id, e.target.value as Plan)}
-                          className="bg-white border border-gray-200 text-xs text-gray-600 rounded-md py-1 px-2 focus:outline-none focus:border-gray-900 cursor-pointer disabled:opacity-50"
+                          className="bg-card border border-border text-xs text-foreground/80 rounded-md py-1 px-2 focus:outline-none focus:border-foreground cursor-pointer disabled:opacity-50"
                         >
                           <option value="free">Free</option>
                           <option value="pro">Pro</option>
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
                           onClick={() => grantCredits(u.user_id)}
                           disabled={savingId === u.user_id}
                           title="Grant bonus credits"
-                          className="border border-gray-200 text-gray-500 rounded-md p-1 hover:border-gray-400 hover:text-gray-900 disabled:opacity-50 transition-colors"
+                          className="border border-border text-muted-foreground rounded-md p-1 hover:border-foreground/40 hover:text-foreground disabled:opacity-50 transition-colors"
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
@@ -169,13 +169,13 @@ export default function AdminDashboard() {
 
 function StatCard({ icon: Icon, label, value, sub }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; sub: string }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="flex items-center gap-1.5 text-gray-400 mb-2">
+    <div className="bg-card border border-border rounded-lg p-4">
+      <div className="flex items-center gap-1.5 text-muted-foreground mb-2">
         <Icon className="w-3.5 h-3.5" />
         <span className="text-[10px] uppercase tracking-wider">{label}</span>
       </div>
-      <p className="text-2xl font-semibold text-gray-900 tabular-nums">{value}</p>
-      <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
+      <p className="text-2xl font-semibold text-foreground tabular-nums">{value}</p>
+      <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>
     </div>
   )
 }

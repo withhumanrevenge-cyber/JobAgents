@@ -109,16 +109,16 @@ export function TopNav() {
     "Find new jobs"
 
   return (
-    <header className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-gray-100 bg-white shrink-0">
+    <header className="h-14 flex items-center justify-between px-4 sm:px-6 border-b border-border/60 bg-card shrink-0">
       <div className="flex items-center gap-2 min-w-0">
         <button
           onClick={toggleSidebar}
-          className="lg:hidden -ml-1 p-1.5 text-gray-500 hover:text-gray-900 rounded-md transition-colors"
+          className="lg:hidden -ml-1 p-1.5 text-muted-foreground hover:text-foreground rounded-md transition-colors"
           aria-label="Open menu"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <p className="text-sm font-medium text-gray-900 truncate">{pageName}</p>
+        <p className="text-sm font-medium text-foreground truncate">{pageName}</p>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
@@ -157,7 +157,7 @@ export function TopNav() {
           className={`flex items-center gap-1.5 text-xs font-medium px-2.5 sm:px-3 py-1.5 rounded-md border transition-colors disabled:opacity-50 shrink-0 ${
             syncStatus === "done"
               ? "border-green-200 text-green-700 bg-green-50"
-              : "border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-900"
+              : "border-border text-foreground/80 hover:border-foreground/40 hover:text-foreground"
           }`}
         >
           {syncing          ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
@@ -167,11 +167,11 @@ export function TopNav() {
         </button>
 
         {userEmail && (
-          <div className="flex items-center gap-2 pl-3 border-l border-gray-100">
-            <div className="w-7 h-7 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-[10px] font-semibold text-gray-600 select-none">
+          <div className="flex items-center gap-2 pl-3 border-l border-border/60">
+            <div className="w-7 h-7 rounded-full bg-accent border border-border flex items-center justify-center text-[10px] font-semibold text-foreground/80 select-none">
               {userEmail.slice(0, 2).toUpperCase()}
             </div>
-            <span className="text-xs text-gray-400 hidden sm:block truncate max-w-[140px]">{userEmail}</span>
+            <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[140px]">{userEmail}</span>
           </div>
         )}
       </div>

@@ -16,7 +16,7 @@ import { spring } from "@/lib/motion"
 
 const ResumePreview = dynamic(
   () => import("@/components/resume/ResumePreview").then((mod) => mod.ResumePreview),
-  { ssr: false, loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div> }
+  { ssr: false, loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
 )
 
 function stripHtml(html: string): string {
@@ -200,13 +200,13 @@ export default function JobDetailPage() {
     finally { setAppliedLoading(false) }
   }
 
-  if (loading) return <div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+  if (loading) return <div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
 
   if (error || !match || !match.job) {
     return (
       <div className="max-w-xl mx-auto py-12 px-6 text-center">
         <p className="text-sm text-red-600 mb-4">{error || "Job not found."}</p>
-        <button onClick={() => router.push("/jobs")} className="border border-gray-200 text-sm text-gray-700 px-4 py-2 rounded-md hover:border-gray-400 transition-colors">
+        <button onClick={() => router.push("/jobs")} className="border border-border text-sm text-foreground/90 px-4 py-2 rounded-md hover:border-foreground/40 transition-colors">
           Back to jobs
         </button>
       </div>
@@ -214,25 +214,25 @@ export default function JobDetailPage() {
   }
 
   const job   = match.job
-  const card   = "bg-white border border-gray-200 rounded-lg p-4 space-y-3"
+  const card   = "bg-card border border-border rounded-lg p-4 space-y-3"
 
   return (
     <div className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-6">
       <Reveal>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-gray-100 pb-5 gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start border-b border-border/60 pb-5 gap-3 sm:gap-4">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-gray-900 leading-tight">{job.title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{job.company}</p>
+          <h1 className="text-lg font-semibold text-foreground leading-tight">{job.title}</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{job.company}</p>
         </div>
         <div className="flex gap-2 shrink-0 flex-wrap sm:justify-end">
           {coverLetter && !smartPanelOpen ? (
             <button onClick={() => setSmartPanelOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium bg-gray-900 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 transition-colors">
+              className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:opacity-90 transition-colors">
               <Zap className="w-3.5 h-3.5" /> View Smart Apply
             </button>
           ) : (
             <button onClick={() => setConsentFor("smart")} disabled={smartApplying}
-              className="flex items-center gap-1.5 text-xs font-medium bg-gray-900 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors">
+              className="flex items-center gap-1.5 text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:opacity-90 disabled:opacity-50 transition-colors">
               {smartApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
               {smartApplying ? "Preparing..." : "Smart Apply"}
             </button>
@@ -243,13 +243,13 @@ export default function JobDetailPage() {
             </span>
           ) : (
             <button onClick={handleMarkAsApplied} disabled={appliedLoading}
-              className="flex items-center gap-1.5 text-xs font-medium border border-gray-200 text-gray-700 px-3 py-1.5 rounded-md hover:border-gray-400 disabled:opacity-50 transition-colors">
+              className="flex items-center gap-1.5 text-xs font-medium border border-border text-foreground/90 px-3 py-1.5 rounded-md hover:border-foreground/40 disabled:opacity-50 transition-colors">
               {appliedLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileCheck className="w-3.5 h-3.5" />}
               Mark applied
             </button>
           )}
           <a href={job.url} target="_blank" rel="noreferrer"
-            className="flex items-center gap-1.5 text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-md hover:border-gray-400 transition-colors">
+            className="flex items-center gap-1.5 text-xs text-foreground/80 border border-border px-3 py-1.5 rounded-md hover:border-foreground/40 transition-colors">
             Apply page <ExternalLink className="w-3 h-3" />
           </a>
         </div>
@@ -265,25 +265,25 @@ export default function JobDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-3 gap-4">
+          <div className="bg-card border border-border rounded-lg p-4 grid grid-cols-3 gap-4">
             {[
               { icon: MapPin, label: "Location", value: job.location || "Remote" },
               { icon: Calendar, label: "Posted",   value: calculateDaysAgo(job.posted_date) },
               { icon: DollarSign, label: "Salary",  value: job.salary_range || "—" },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-2">
-                <Icon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <div>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</p>
-                  <p className="text-xs font-medium text-gray-700">{value}</p>
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider">{label}</p>
+                  <p className="text-xs font-medium text-foreground/90">{value}</p>
                 </div>
               </div>
             ))}
           </div>
 
           <div className={card}>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Description</p>
-            <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap select-text">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Description</p>
+            <p className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap select-text">
               {stripHtml(job.description || "No description available.")}
             </p>
           </div>
@@ -291,21 +291,21 @@ export default function JobDetailPage() {
 
         <div className="space-y-4">
           <div className={card}>
-            <p className="text-[10px] text-gray-400 uppercase tracking-wider">Match</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Match</p>
             {match.match_score < 0 ? (
-              <p className="text-xs text-gray-400">Run the agent to score this job.</p>
+              <p className="text-xs text-muted-foreground">Run the agent to score this job.</p>
             ) : (
               <>
                 <MatchScoreBadge score={match.match_score} size="lg" />
                 {match.match_reason && (
-                  <p className="text-xs text-gray-500 italic leading-relaxed border border-gray-100 rounded-md p-2 bg-gray-50">&quot;{match.match_reason}&quot;</p>
+                  <p className="text-xs text-muted-foreground italic leading-relaxed border border-border/60 rounded-md p-2 bg-muted">&quot;{match.match_reason}&quot;</p>
                 )}
                 <div className="space-y-2 pt-1">
                   <div>
                     <p className="text-[9px] text-green-700 font-medium uppercase mb-1">Matched skills</p>
                     <div className="flex flex-wrap gap-1">
                       {match.matched_skills.length === 0
-                        ? <span className="text-xs text-gray-400 italic">None detected</span>
+                        ? <span className="text-xs text-muted-foreground italic">None detected</span>
                         : match.matched_skills.map((s, i) => <span key={i} className="bg-green-50 border border-green-200 text-[9px] text-green-700 px-2 py-0.5 rounded">{s}</span>)}
                     </div>
                   </div>
@@ -313,7 +313,7 @@ export default function JobDetailPage() {
                     <p className="text-[9px] text-amber-700 font-medium uppercase mb-1">Missing skills</p>
                     <div className="flex flex-wrap gap-1">
                       {match.missing_skills.length === 0
-                        ? <span className="text-xs text-gray-400 italic">None</span>
+                        ? <span className="text-xs text-muted-foreground italic">None</span>
                         : match.missing_skills.map((s, i) => <span key={i} className="bg-amber-50 border border-amber-200 text-[9px] text-amber-700 px-2 py-0.5 rounded">{s}</span>)}
                     </div>
                   </div>
@@ -324,7 +324,7 @@ export default function JobDetailPage() {
 
           <div className={card}>
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider">Resume</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Resume</p>
               {tailoredResume?.ats_score !== undefined && (
                 <span className={`text-[10px] font-medium border rounded px-1.5 py-0.5 ${tailoredResume.ats_score >= 75 ? "bg-green-50 border-green-200 text-green-700" : tailoredResume.ats_score >= 50 ? "bg-amber-50 border-amber-200 text-amber-700" : "bg-red-50 border-red-200 text-red-700"}`}>
                   ATS {tailoredResume.ats_score}%
@@ -335,9 +335,9 @@ export default function JobDetailPage() {
               <ResumePreview initialData={tailoredResume} onSave={handleSaveResumeEdits} />
             ) : (
               <div className="space-y-3 pt-1">
-                <p className="text-xs text-gray-500 leading-relaxed">Rewrite your resume to match this job&apos;s requirements and maximize ATS score.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">Rewrite your resume to match this job&apos;s requirements and maximize ATS score.</p>
                 <button onClick={() => setConsentFor("tailor")} disabled={tailoring}
-                  className="w-full bg-gray-900 text-white text-xs font-medium py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                  className="w-full bg-primary text-primary-foreground text-xs font-medium py-2 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
                   {tailoring ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Briefcase className="w-3.5 h-3.5" />}
                   {tailoring ? "Tailoring..." : "Tailor resume"}
                 </button>
@@ -347,14 +347,14 @@ export default function JobDetailPage() {
 
           <div className={card}>
             <div className="flex items-center justify-between">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Interview prep</p>
-              {interviewQuestions && <span className="text-[9px] text-gray-400">{interviewQuestions.length} questions</span>}
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Interview prep</p>
+              {interviewQuestions && <span className="text-[9px] text-muted-foreground">{interviewQuestions.length} questions</span>}
             </div>
             {!interviewQuestions ? (
               <div className="space-y-3 pt-1">
-                <p className="text-xs text-gray-500 leading-relaxed">10 targeted questions — technical, behavioral, and role-specific.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">10 targeted questions — technical, behavioral, and role-specific.</p>
                 <button onClick={handleGenerateInterview} disabled={generatingInterview}
-                  className="w-full bg-gray-900 text-white text-xs font-medium py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+                  className="w-full bg-primary text-primary-foreground text-xs font-medium py-2 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
                   {generatingInterview && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {generatingInterview ? "Generating..." : "Generate questions"}
                 </button>
@@ -367,21 +367,21 @@ export default function JobDetailPage() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ ...spring, delay: idx * 0.04 }}
-                    className="border border-gray-200 rounded-md overflow-hidden"
+                    className="border border-border rounded-md overflow-hidden"
                   >
                     <button onClick={() => setOpenQuestion(openQuestion === idx ? null : idx)}
-                      className="w-full flex items-start justify-between gap-3 p-2.5 text-left hover:bg-gray-50 transition-colors">
+                      className="w-full flex items-start justify-between gap-3 p-2.5 text-left hover:bg-muted transition-colors">
                       <div className="flex items-start gap-2 flex-1 min-w-0">
                         <span className={`text-[8px] font-medium border rounded px-1.5 py-0.5 shrink-0 mt-0.5 ${
                           q.category === "technical"     ? "bg-blue-50 border-blue-200 text-blue-700" :
                           q.category === "behavioral"    ? "bg-purple-50 border-purple-200 text-purple-700" :
                           q.category === "role-specific" ? "bg-green-50 border-green-200 text-green-700" :
-                          "bg-gray-50 border-gray-200 text-gray-600"
+                          "bg-muted border-border text-foreground/80"
                         }`}>{q.category}</span>
-                        <p className="text-xs text-gray-600 leading-relaxed">{q.question}</p>
+                        <p className="text-xs text-foreground/80 leading-relaxed">{q.question}</p>
                       </div>
                       <motion.span animate={{ rotate: openQuestion === idx ? 180 : 0 }} transition={spring} className="shrink-0 mt-1">
-                        <ChevronDown className="w-3 h-3 text-gray-400" />
+                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
                       </motion.span>
                     </button>
                     <AnimatePresence initial={false}>
@@ -392,10 +392,10 @@ export default function JobDetailPage() {
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={spring}
-                          className="overflow-hidden bg-gray-50 border-t border-gray-100"
+                          className="overflow-hidden bg-muted border-t border-border/60"
                         >
-                          <p className="text-xs text-gray-500 italic leading-relaxed px-3 py-2">
-                            <span className="font-medium text-gray-700 not-italic">Tip: </span>{q.tip}
+                          <p className="text-xs text-muted-foreground italic leading-relaxed px-3 py-2">
+                            <span className="font-medium text-foreground/90 not-italic">Tip: </span>{q.tip}
                           </p>
                         </motion.div>
                       )}
@@ -403,7 +403,7 @@ export default function JobDetailPage() {
                   </motion.div>
                 ))}
                 <button onClick={handleGenerateInterview} disabled={generatingInterview}
-                  className="w-full mt-1 text-[10px] text-gray-400 hover:text-gray-700 flex items-center justify-center gap-1 transition-colors">
+                  className="w-full mt-1 text-[10px] text-muted-foreground hover:text-foreground/90 flex items-center justify-center gap-1 transition-colors">
                   {generatingInterview && <Loader2 className="w-3 h-3 animate-spin" />} Regenerate
                 </button>
               </div>
@@ -430,15 +430,15 @@ export default function JobDetailPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={spring}
-              className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-white border-l border-gray-200 z-50 flex flex-col shadow-xl"
+              className="fixed top-0 right-0 h-full w-full sm:w-[440px] bg-card border-l border-border z-50 flex flex-col shadow-xl"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border/60">
                 <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">Smart Apply</p>
-                  <p className="text-sm font-semibold text-gray-900">{job.title}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Smart Apply</p>
+                  <p className="text-sm font-semibold text-foreground">{job.title}</p>
                 </div>
                 <button onClick={() => setSmartPanelOpen(false)}
-                  className="w-7 h-7 border border-gray-200 rounded-md flex items-center justify-center text-gray-500 hover:border-gray-400 hover:text-gray-900 transition-colors">
+                  className="w-7 h-7 border border-border rounded-md flex items-center justify-center text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -451,47 +451,47 @@ export default function JobDetailPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">Cover letter</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Cover letter</p>
                     <button onClick={() => handleCopy(coverLetter, "letter")}
-                      className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-900 border border-gray-200 px-2 py-0.5 rounded transition-colors">
+                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground border border-border px-2 py-0.5 rounded transition-colors">
                       {copied === "letter" ? <CheckCircle className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                       {copied === "letter" ? "Copied" : "Copy"}
                     </button>
                   </div>
-                  <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                    <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{coverLetter}</p>
+                  <div className="border border-border rounded-md p-3 bg-muted">
+                    <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">{coverLetter}</p>
                   </div>
                 </div>
 
                 {tailoredResume && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">Tailored resume summary</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Tailored resume summary</p>
                       <button onClick={() => handleCopy(tailoredResume.summary, "resume")}
-                        className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-900 border border-gray-200 px-2 py-0.5 rounded transition-colors">
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground border border-border px-2 py-0.5 rounded transition-colors">
                         {copied === "resume" ? <CheckCircle className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
                         {copied === "resume" ? "Copied" : "Copy"}
                       </button>
                     </div>
-                    <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
-                      <p className="text-xs text-gray-700 leading-relaxed">{tailoredResume.summary}</p>
+                    <div className="border border-border rounded-md p-3 bg-muted">
+                      <p className="text-xs text-foreground/90 leading-relaxed">{tailoredResume.summary}</p>
                       {typeof tailoredResume.ats_score === "number" && (
-                        <p className="text-[10px] text-gray-500 mt-2">ATS score: <span className="font-semibold text-gray-900">{tailoredResume.ats_score}%</span></p>
+                        <p className="text-[10px] text-muted-foreground mt-2">ATS score: <span className="font-semibold text-foreground">{tailoredResume.ats_score}%</span></p>
                       )}
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">Full PDF available in the Resume panel of this page. Download and attach it on the application form.</p>
+                    <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">Full PDF available in the Resume panel of this page. Download and attach it on the application form.</p>
                   </div>
                 )}
               </div>
 
-              <div className="px-5 py-3 border-t border-gray-100 flex gap-2">
+              <div className="px-5 py-3 border-t border-border/60 flex gap-2">
                 <a href={job.url} target="_blank" rel="noreferrer"
-                  className="flex-1 bg-gray-900 text-white text-xs font-medium py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center justify-center gap-1.5">
+                  className="flex-1 bg-primary text-primary-foreground text-xs font-medium py-2 rounded-md hover:opacity-90 transition-colors flex items-center justify-center gap-1.5">
                   Open apply page <ExternalLink className="w-3 h-3" />
                 </a>
                 {match.status !== "applied" && (
                   <button onClick={handleMarkAsApplied} disabled={appliedLoading}
-                    className="border border-gray-200 text-xs text-gray-700 px-3 py-2 rounded-md hover:border-gray-400 disabled:opacity-50 flex items-center gap-1.5 transition-colors">
+                    className="border border-border text-xs text-foreground/90 px-3 py-2 rounded-md hover:border-foreground/40 disabled:opacity-50 flex items-center gap-1.5 transition-colors">
                     {appliedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileCheck className="w-3 h-3" />}
                     Mark applied
                   </button>

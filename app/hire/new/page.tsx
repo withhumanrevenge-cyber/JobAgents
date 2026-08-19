@@ -21,8 +21,8 @@ export default function NewPostingPage() {
   const [skills, setSkills] = useState<string[]>([])
   const [description, setDescription] = useState("")
 
-  const inputCls = "w-full border border-gray-200 rounded-md py-2.5 px-3 text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-900 focus:outline-none transition-colors"
-  const labelCls = "block text-xs text-gray-500 mb-1.5"
+  const inputCls = "w-full border border-border rounded-md py-2.5 px-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none transition-colors"
+  const labelCls = "block text-xs text-muted-foreground mb-1.5"
 
   const canSubmit = title.trim() && company.trim() && description.trim()
 
@@ -53,16 +53,16 @@ export default function NewPostingPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link href="/hire" className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 transition-colors mb-4">
+      <Link href="/hire" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4">
         <ArrowLeft className="w-3.5 h-3.5" /> Back
       </Link>
 
-      <h1 className="text-lg font-semibold text-gray-900">Post a role</h1>
-      <p className="text-sm text-gray-400 mt-0.5 mb-6">We&apos;ll match candidates from the opt-in talent pool against it.</p>
+      <h1 className="text-lg font-semibold text-foreground">Post a role</h1>
+      <p className="text-sm text-muted-foreground mt-0.5 mb-6">We&apos;ll match candidates from the opt-in talent pool against it.</p>
 
       {error && <div className="mb-4 p-2.5 bg-red-50 border border-red-200 text-red-600 rounded-md text-xs">{error}</div>}
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 space-y-4">
+      <div className="bg-card border border-border rounded-lg p-4 sm:p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>Role title *</label>
@@ -119,9 +119,9 @@ export default function NewPostingPage() {
       </div>
 
       <div className="flex gap-3 mt-4">
-        <Link href="/hire" className="flex-1 text-center border border-gray-200 text-gray-700 text-sm font-medium py-2.5 rounded-md hover:border-gray-400 transition-colors">Cancel</Link>
+        <Link href="/hire" className="flex-1 text-center border border-border text-foreground/90 text-sm font-medium py-2.5 rounded-md hover:border-foreground/40 transition-colors">Cancel</Link>
         <button onClick={handleSubmit} disabled={!canSubmit || saving}
-          className="flex-1 bg-gray-900 text-white text-sm font-medium py-2.5 rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+          className="flex-1 bg-primary text-primary-foreground text-sm font-medium py-2.5 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {saving ? "Posting…" : "Post role"}
         </button>

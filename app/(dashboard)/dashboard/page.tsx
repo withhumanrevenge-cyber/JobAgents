@@ -15,7 +15,7 @@ import { Stagger, StaggerItem } from "@/components/motion/Stagger"
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
       <DashboardHome />
     </Suspense>
   )
@@ -91,7 +91,7 @@ function DashboardHome() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
-        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -131,8 +131,8 @@ function DashboardHome() {
       )}
 
       <Reveal>
-        <h1 className="text-lg font-semibold text-gray-900">Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Here&apos;s your job search overview.</p>
+        <h1 className="text-lg font-semibold text-foreground">Welcome back{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Here&apos;s your job search overview.</p>
       </Reveal>
 
       <Reveal delay={0.05}>
@@ -142,24 +142,24 @@ function DashboardHome() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-2">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-xs text-gray-400">Top matches</p>
-            <Link href="/jobs" className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1 transition-colors">
+            <p className="text-xs text-muted-foreground">Top matches</p>
+            <Link href="/jobs" className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
               All jobs <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+          <div className="bg-card border border-border rounded-lg divide-y divide-gray-100">
             {topMatches.length === 0 ? (
               <div className="text-center py-12 px-6">
-                <p className="text-sm text-gray-500">No matches yet</p>
-                <p className="text-xs text-gray-400 mt-1 mb-4">
+                <p className="text-sm text-muted-foreground">No matches yet</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">
                   {profile?.parsed_resume
                     ? "Fetch fresh jobs and score them against your resume."
                     : "Upload your resume first, then search for jobs."}
                 </p>
                 {profile?.parsed_resume && (
                   <button onClick={runInlineSync} disabled={inlineSyncing}
-                    className="bg-gray-900 text-white text-xs font-medium px-4 py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 inline-flex items-center gap-2 transition-colors">
+                    className="bg-primary text-primary-foreground text-xs font-medium px-4 py-2 rounded-md hover:opacity-90 disabled:opacity-50 inline-flex items-center gap-2 transition-colors">
                     {inlineSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                     {inlineSyncing ? "Searching..." : "Find jobs now"}
                   </button>
@@ -172,15 +172,15 @@ function DashboardHome() {
               <Stagger>
                 {topMatches.map((match) => (
                   <StaggerItem key={match.id}>
-                    <div className="p-4 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors group">
+                    <div className="p-4 flex items-center justify-between gap-4 hover:bg-muted transition-colors group">
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{match.job?.title}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{match.job?.company} · {match.job?.location || "Remote"}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{match.job?.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{match.job?.company} · {match.job?.location || "Remote"}</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         <MatchScoreBadge score={match.match_score} size="sm" />
                         <Link href={`/jobs/${match.job?.id}`}
-                          className="w-7 h-7 border border-gray-200 rounded-md flex items-center justify-center text-gray-400 hover:border-gray-900 hover:text-gray-900 transition-colors">
+                          className="w-7 h-7 border border-border rounded-md flex items-center justify-center text-muted-foreground hover:border-foreground hover:text-foreground transition-colors">
                           <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>

@@ -85,16 +85,16 @@ export default function SettingsPage() {
     )
   }
 
-  if (loading) return <div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-gray-400" /></div>
+  if (loading) return <div className="flex items-center justify-center min-h-[500px]"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
 
-  const inputCls = "w-full border border-gray-200 rounded-md py-2.5 px-3 text-base sm:text-sm text-gray-900 placeholder-gray-400 focus:border-gray-900 focus:outline-none transition-colors"
-  const labelCls = "block text-xs text-gray-500 mb-1.5"
+  const inputCls = "w-full border border-border rounded-md py-2.5 px-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none transition-colors"
+  const labelCls = "block text-xs text-muted-foreground mb-1.5"
 
   return (
     <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-6">
       <Reveal>
-        <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Profile, resume, and matching preferences.</p>
+        <h1 className="text-lg font-semibold text-foreground">Settings</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Profile, resume, and matching preferences.</p>
       </Reveal>
 
       <AnimatePresence>
@@ -115,8 +115,8 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="md:col-span-2 space-y-5">
-          <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
-            <p className="text-sm font-medium text-gray-900">Profile</p>
+          <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-5 space-y-4">
+            <p className="text-sm font-medium text-foreground">Profile</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -126,7 +126,7 @@ export default function SettingsPage() {
               <div>
                 <label className={labelCls}>Email</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" className={inputCls} />
-                <p className="text-[10px] text-gray-400 mt-1">Used on tailored resumes</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Used on tailored resumes</p>
               </div>
             </div>
 
@@ -141,8 +141,8 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <hr className="border-gray-100" />
-            <p className="text-sm font-medium text-gray-900">Matching</p>
+            <hr className="border-border/60" />
+            <p className="text-sm font-medium text-foreground">Matching</p>
 
             <div>
               <label className={labelCls}>Target roles</label>
@@ -159,65 +159,65 @@ export default function SettingsPage() {
               <select value={targetCountry} onChange={e => setTargetCountry(e.target.value)} className={inputCls}>
                 {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
               </select>
-              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">Adzuna and JSearch are searched in this country. Remotive (remote-only) is always included.</p>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">Adzuna and JSearch are searched in this country. Remotive (remote-only) is always included.</p>
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className={labelCls}>Match score threshold</label>
-                <span className="text-xs font-medium text-gray-900">{matchThreshold}%</span>
+                <span className="text-xs font-medium text-foreground">{matchThreshold}%</span>
               </div>
               <input type="range" min="0" max="100" value={matchThreshold}
                 onChange={e => setMatchThreshold(Number(e.target.value))}
-                className="w-full h-1 bg-gray-200 rounded appearance-none cursor-pointer accent-gray-900" />
-              <p className="text-[10px] text-gray-400 mt-1.5">Jobs scoring below this against your resume are hidden from your feed.</p>
+                className="w-full h-1 bg-muted rounded appearance-none cursor-pointer accent-foreground" />
+              <p className="text-[10px] text-muted-foreground mt-1.5">Jobs scoring below this against your resume are hidden from your feed.</p>
             </div>
 
-            <hr className="border-gray-100" />
-            <p className="text-sm font-medium text-gray-900">Notifications</p>
+            <hr className="border-border/60" />
+            <p className="text-sm font-medium text-foreground">Notifications</p>
 
-            <div className="bg-gray-50 border border-gray-200 p-3 rounded-md space-y-3">
+            <div className="bg-muted border border-border p-3 rounded-md space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-start gap-2.5">
-                  <Mail className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                  <Mail className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Email digest</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Get an email when new matches land above your threshold.</p>
+                    <p className="text-sm font-medium text-foreground">Email digest</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Get an email when new matches land above your threshold.</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input type="checkbox" checked={emailNotifications} onChange={e => setEmailNotifications(e.target.checked)} className="sr-only peer" />
-                  <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-gray-900 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                  <div className="w-10 h-5 bg-muted rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-4 after:w-4 after:transition-all" />
                 </label>
               </div>
               <button type="button" onClick={handleSendTest} disabled={sendingTest || !email}
-                className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-md hover:border-gray-400 disabled:opacity-50 flex items-center gap-1.5 transition-colors">
+                className="text-xs text-foreground/80 border border-border px-3 py-1.5 rounded-md hover:border-foreground/40 disabled:opacity-50 flex items-center gap-1.5 transition-colors">
                 {sendingTest ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
                 {sendingTest ? "Sending..." : "Send test email"}
               </button>
             </div>
 
-            <hr className="border-gray-100" />
-            <p className="text-sm font-medium text-gray-900">Talent pool</p>
+            <hr className="border-border/60" />
+            <p className="text-sm font-medium text-foreground">Talent pool</p>
 
-            <div className="bg-gray-50 border border-gray-200 p-3 rounded-md">
+            <div className="bg-muted border border-border p-3 rounded-md">
               <div className="flex items-center justify-between">
                 <div className="flex items-start gap-2.5">
-                  <Users className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                  <Users className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900">Open to work</p>
-                    <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">Let recruiters on JobAgent discover you for roles you match. They see your name, resume summary, and contact details. Turn off any time.</p>
+                    <p className="text-sm font-medium text-foreground">Open to work</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">Let recruiters on JobAgent discover you for roles you match. They see your name, resume summary, and contact details. Turn off any time.</p>
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input type="checkbox" checked={openToWork} onChange={e => setOpenToWork(e.target.checked)} className="sr-only peer" />
-                  <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-gray-900 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                  <div className="w-10 h-5 bg-muted rounded-full peer peer-checked:bg-primary peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:rounded-full after:h-4 after:w-4 after:transition-all" />
                 </label>
               </div>
             </div>
 
             <button type="submit" disabled={saving}
-              className="bg-gray-900 text-white text-sm font-medium py-2 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2 transition-colors">
+              className="bg-primary text-primary-foreground text-sm font-medium py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center gap-2 transition-colors">
               {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Save changes
             </button>
@@ -231,10 +231,10 @@ export default function SettingsPage() {
 
           <AccountTypeCard />
 
-          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+          <div className="bg-card border border-border rounded-lg p-4 space-y-4">
             <div>
-              <p className="text-sm font-medium text-gray-900">Resume</p>
-              <p className="text-xs text-gray-400 mt-0.5">Used for job scoring and tailoring.</p>
+              <p className="text-sm font-medium text-foreground">Resume</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Used for job scoring and tailoring.</p>
             </div>
 
             {parsedResume && (
@@ -246,7 +246,7 @@ export default function SettingsPage() {
                 <p className="text-[10px] text-green-600">{parsedResume.target_role} · {parsedResume.years_experience}y · {parsedResume.skills.length} skills</p>
                 {resumeUrl && (
                   <button type="button" onClick={() => openStoredResume()}
-                    className="text-[10px] text-gray-500 hover:text-gray-900">
+                    className="text-[10px] text-muted-foreground hover:text-foreground">
                     View PDF →
                   </button>
                 )}

@@ -12,7 +12,7 @@ const CONTACT = "withhumanrevenge@gmail.com"
 export default function TermsPage() {
   return (
     <LegalShell title="Terms of Service" updated="June 28, 2026">
-      <p className="text-sm text-gray-600 leading-relaxed">
+      <p className="text-sm text-foreground/80 leading-relaxed">
         These Terms of Service (&quot;Terms&quot;) govern your use of JobAgent. By creating an account or using the
         service, you agree to these Terms. If you do not agree, do not use JobAgent.
       </p>
@@ -55,7 +55,7 @@ export default function TermsPage() {
           you will not be charged again. Because the service grants access to AI features immediately, paid subscription
           fees are generally non-refundable except where required by law. If you believe you were charged in error,
           contact us at{" "}
-          <a href={`mailto:${CONTACT}`} className="text-gray-900 underline underline-offset-2">{CONTACT}</a> and we will
+          <a href={`mailto:${CONTACT}`} className="text-foreground underline underline-offset-2">{CONTACT}</a> and we will
           review it in good faith.
         </p>
       </LegalSection>
@@ -108,8 +108,8 @@ export default function TermsPage() {
       <LegalSection heading="12. Contact">
         <p>
           Questions about these Terms? Email{" "}
-          <a href={`mailto:${CONTACT}`} className="text-gray-900 underline underline-offset-2">{CONTACT}</a>. See also our{" "}
-          <Link href="/privacy" className="text-gray-900 underline underline-offset-2">Privacy Policy</Link>.
+          <a href={`mailto:${CONTACT}`} className="text-foreground underline underline-offset-2">{CONTACT}</a>. See also our{" "}
+          <Link href="/privacy" className="text-foreground underline underline-offset-2">Privacy Policy</Link>.
         </p>
       </LegalSection>
     </LegalShell>

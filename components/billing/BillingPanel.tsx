@@ -17,7 +17,7 @@ interface UsageData {
 }
 
 const PLAN_TONE: Record<Plan, string> = {
-  free: "bg-gray-100 text-gray-600",
+  free: "bg-accent text-foreground/80",
   pro: "bg-blue-50 text-blue-700 border border-blue-200",
   premium: "bg-amber-50 text-amber-700 border border-amber-200",
 }
@@ -47,7 +47,7 @@ export function BillingPanel() {
   }
 
   if (loading) {
-    return <div className="bg-white border border-gray-200 rounded-lg p-4 flex justify-center"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /></div>
+    return <div className="bg-card border border-border rounded-lg p-4 flex justify-center"><Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /></div>
   }
   if (!data) return null
 
@@ -57,7 +57,7 @@ export function BillingPanel() {
   const upgrades = (["pro", "premium"] as const).filter((p) => PLAN_CONFIG[p].priceUsd > PLAN_CONFIG[data.plan].priceUsd)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
       {justUpgraded && (
         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2">
           Payment received. If your plan still shows the old tier, give it a moment to confirm.
@@ -65,19 +65,19 @@ export function BillingPanel() {
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-900">Plan & credits</p>
+        <p className="text-sm font-medium text-foreground">Plan & credits</p>
         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${PLAN_TONE[data.plan]}`}>{data.plan}</span>
       </div>
 
       <div>
         <div className="flex justify-between text-[11px] mb-1">
-          <span className="text-gray-500">Credits this month</span>
-          <span className={low ? "text-red-600 font-medium" : "text-gray-400"}>{remaining} / {allotment} left</span>
+          <span className="text-muted-foreground">Credits this month</span>
+          <span className={low ? "text-red-600 font-medium" : "text-muted-foreground"}>{remaining} / {allotment} left</span>
         </div>
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${low ? "bg-red-400" : "bg-gray-900"}`} style={{ width: `${pct}%` }} />
+        <div className="h-1.5 bg-accent rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${low ? "bg-red-400" : "bg-primary"}`} style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-[10px] text-gray-400 mt-1.5">
+        <p className="text-[10px] text-muted-foreground mt-1.5">
           {(Object.keys(data.costs) as UsageAction[]).map((a) => `${ACTION_LABEL[a]} ${data.costs[a]}`).join(" · ")} credits · matching is free
         </p>
       </div>
@@ -88,7 +88,7 @@ export function BillingPanel() {
         </p>
       ) : (
         <div className="space-y-3 pt-1">
-          <p className="text-xs font-medium text-gray-700">Upgrade for more credits & jobs</p>
+          <p className="text-xs font-medium text-foreground/90">Upgrade for more credits & jobs</p>
           {upgrades.map((p) => (
             <PlanOption
               key={p}
@@ -118,26 +118,26 @@ function PlanOption({ title, price, detail, busy, processors, onIntl, onIndia, k
   const both = processors.razorpay && processors.lemonsqueezy
   const none = !processors.razorpay && !processors.lemonsqueezy
   return (
-    <div className="border border-gray-200 rounded-md p-3">
+    <div className="border border-border rounded-md p-3">
       <div className="flex items-baseline justify-between mb-0.5">
-        <p className="text-sm font-semibold text-gray-900">{title}</p>
-        <p className="text-sm font-medium text-gray-900">{price}</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-sm font-medium text-foreground">{price}</p>
       </div>
-      <p className="text-[10px] text-gray-400 mb-2">{detail}</p>
+      <p className="text-[10px] text-muted-foreground mb-2">{detail}</p>
       {none ? (
-        <p className="text-[10px] text-gray-400">Checkout coming soon.</p>
+        <p className="text-[10px] text-muted-foreground">Checkout coming soon.</p>
       ) : (
         <div className="flex gap-2">
           {processors.lemonsqueezy && (
             <button onClick={onIntl} disabled={!!busy}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-gray-900 text-white text-xs font-medium py-1.5 rounded-md hover:bg-gray-700 disabled:opacity-50 transition-colors">
+              className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-xs font-medium py-1.5 rounded-md hover:opacity-90 disabled:opacity-50 transition-colors">
               {busy === `lemonsqueezy-${keyPrefix}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <CreditCard className="w-3 h-3" />}
               {both ? "Card" : "Upgrade"}
             </button>
           )}
           {processors.razorpay && (
             <button onClick={onIndia} disabled={!!busy}
-              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md disabled:opacity-50 transition-colors ${both ? "border border-gray-200 text-gray-700 hover:border-gray-400" : "bg-gray-900 text-white hover:bg-gray-700"}`}>
+              className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium py-1.5 rounded-md disabled:opacity-50 transition-colors ${both ? "border border-border text-foreground/90 hover:border-foreground/40" : "bg-primary text-primary-foreground hover:opacity-90"}`}>
               {busy === `razorpay-${keyPrefix}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
               {both ? "UPI / India" : "Upgrade"}
             </button>
