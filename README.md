@@ -4,7 +4,7 @@
 
 **Your AI co-pilot for the job hunt** — upload your resume once, and get every job scored against your real background, with a tailored resume, cover letter, and interview prep ready in one click.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-help--me--get--hired.vercel.app-000?style=for-the-badge)](https://help-me-get-hired.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-getjobagents.xyz-000?style=for-the-badge)](https://getjobagents.xyz/)
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
@@ -24,7 +24,7 @@ Job seekers waste hours triaging listings, rewriting the same resume, and guessi
 
 Built as a production-grade, full-stack SaaS: authentication, a credit-metered billing system with two payment processors, an admin analytics dashboard, background job syncing, transactional email, and a region-aware experience (₹ for India, $ internationally).
 
-> **Try it live:** [help-me-get-hired.vercel.app](https://help-me-get-hired.vercel.app)
+> **Try it live:** [getjobagents.xyz](https://getjobagents.xyz/)
 
 ---
 
@@ -108,8 +108,8 @@ A few engineering decisions worth calling out:
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/withhumanrevenge-cyber/HelpMeGetHired.git
-cd HelpMeGetHired
+git clone https://github.com/withhumanrevenge-cyber/JobAgents.git
+cd JobAgents
 npm install
 
 # 2. Configure environment
