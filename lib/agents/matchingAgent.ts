@@ -100,11 +100,9 @@ export async function matchJobsForUser(
 
   const matchedJobIds = new Set((matchedJobIdsData || []).map((m) => m.job_id))
 
-  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   let jobsQuery = supabase
     .from("jobs")
     .select("id, title, company, location, tags, description, posted_date, source")
-    .gte("posted_date", monthAgo)
     .order("posted_date", { ascending: false })
     .limit(600)
   if (!PLAN_CONFIG[effectivePlan(profile)].allSources) {

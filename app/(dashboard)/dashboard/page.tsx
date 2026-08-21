@@ -33,13 +33,11 @@ function DashboardHome() {
 
   useEffect(() => {
     if (matches.length > 0 || allJobRows.length > 0) {
-      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-      const inFeed = (m: (typeof matches)[number]) =>
-        m.status !== "skipped" && (m.job?.posted_date ? new Date(m.job.posted_date).getTime() >= cutoff : false)
+      const inFeed = (m: (typeof matches)[number]) => m.status !== "skipped"
       Promise.resolve().then(() =>
         setStats({
           totalJobs:        allJobRows.filter(inFeed).length,
-          matches:          matches.filter((m) => m.status === "reviewed" && inFeed(m)).length,
+          matches:          matches.filter((m) => (m.status === "reviewed" || m.status === "pending") && inFeed(m)).length,
           applicationsSent: matches.filter((m) => m.status === "applied").length,
           interviews:       matches.filter((m) => m.status === "interview").length,
         })
@@ -97,10 +95,8 @@ function DashboardHome() {
   }
 
   const threshold = profile?.match_threshold || 70
-  const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
   const topMatches = [...matches]
-    .filter((m) => m.match_score >= threshold && m.status !== "skipped"
-      && (m.job?.posted_date ? new Date(m.job.posted_date).getTime() >= monthAgo : false))
+    .filter((m) => m.match_score >= threshold && m.status !== "skipped" && m.job)
     .sort((a, b) => b.match_score - a.match_score)
     .slice(0, 5)
 
