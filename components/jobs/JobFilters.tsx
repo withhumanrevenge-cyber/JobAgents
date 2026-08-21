@@ -94,9 +94,10 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
           <div className="relative">
             <Clock className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
             <select value={timeFilter} onChange={e => setTimeFilter(e.target.value as TimeFilter)} className={`${selectCls} pl-7`}>
-              <option value="24h">{TIME_LABEL["24h"]}</option>
-              <option value="7d">{TIME_LABEL["7d"]}</option>
+              <option value="all">{TIME_LABEL["all"]}</option>
               <option value="30d">{TIME_LABEL["30d"]}</option>
+              <option value="7d">{TIME_LABEL["7d"]}</option>
+              <option value="24h">{TIME_LABEL["24h"]}</option>
             </select>
           </div>
 

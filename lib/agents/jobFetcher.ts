@@ -13,7 +13,7 @@ export const DEFAULT_QUERIES = [
   "ui ux designer",
 ]
 
-const RECENT_DAYS = 30
+const RECENT_DAYS = 180
 
 function isRecent(job: Partial<Job>): boolean {
   if (!job.posted_date) return true

@@ -52,10 +52,12 @@ export const TIME_LABEL: Record<TimeFilter, string> = {
   "24h": "Last 24 hours",
   "7d":  "Last 7 days",
   "30d": "Last 30 days",
+  "all": "All time",
 }
 
 export const TIME_THRESHOLD_MS: Record<TimeFilter, number> = {
   "24h": 24 * 60 * 60 * 1000,
   "7d":  7  * 24 * 60 * 60 * 1000,
   "30d": 30 * 24 * 60 * 60 * 1000,
+  "all": Number.POSITIVE_INFINITY,
 }
