@@ -2,20 +2,25 @@ import Groq from "groq-sdk"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "" })
 
-export const MODEL = "llama-3.3-70b-versatile"
-export const FAST_MODEL = "llama-3.1-8b-instant"
+export const MODEL = "openai/gpt-oss-120b"
+export const FAST_MODEL = "openai/gpt-oss-20b"
 
 export async function callGroq(
   prompt: string,
   systemInstruction?: string,
-  options: { model?: string; meterUserId?: string } = {}
+  options: { model?: string; meterUserId?: string; maxTokens?: number } = {}
 ): Promise<string> {
   const messages: Groq.Chat.ChatCompletionMessageParam[] = []
   if (systemInstruction) messages.push({ role: "system", content: systemInstruction })
   messages.push({ role: "user", content: prompt })
 
   const model = options.model || MODEL
-  const completion = await groq.chat.completions.create({ model, messages, temperature: 0.3 })
+  const completion = await groq.chat.completions.create({
+    model,
+    messages,
+    temperature: 0.3,
+    max_tokens: options.maxTokens ?? 2048,
+  })
 
   if (options.meterUserId && completion.usage?.total_tokens) {
     import("@/lib/usage")

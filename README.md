@@ -77,7 +77,7 @@ flowchart LR
 A few engineering decisions worth calling out:
 
 - **Multi-agent AI pipeline.** Discrete, single-responsibility agents (`jobFetcher`, `matchingAgent`, `resumeAgent`, `coverLetterAgent`, `interviewAgent`) keep prompts and logic isolated and testable.
-- **Two-tier LLM strategy for cost/perf.** High-volume job scoring runs on Groq's fast `llama-3.1-8b-instant`; quality-critical generation (tailoring, cover letters, interviews) uses `llama-3.3-70b-versatile`. The right model for each job, not one model for all.
+- **Two-tier LLM strategy for cost/perf.** High-volume job scoring runs on Groq's fast `openai/gpt-oss-20b`; quality-critical generation (tailoring, cover letters, interviews) uses `openai/gpt-oss-120b`. The right model for each job, not one model for all.
 - **Credit metering with atomic spend.** An append-only `usage_events` ledger plus a Postgres `consume_credits` function (advisory-locked) prevents double-spend under concurrent requests; paid actions auto-refund if the downstream work fails.
 - **Processor-agnostic billing.** Razorpay (UPI/INR) and Lemon Squeezy (global card/USD) both funnel through one entitlement layer, so the user's plan flips identically regardless of which webhook fires.
 - **Single source of truth for pricing.** Plan limits and prices live in one config; the marketing pages, in-app billing panel, and currency formatting all derive from it and can never drift.
@@ -94,7 +94,7 @@ A few engineering decisions worth calling out:
 | **Styling / UI** | Tailwind CSS, Radix UI primitives, Framer Motion, Lucide icons |
 | **State / Validation** | Zustand, Zod |
 | **Backend** | Next.js Route Handlers, Supabase (PostgreSQL, Auth, Storage) |
-| **AI** | Groq SDK — LLaMA 3.1 8B (scoring) & 3.3 70B (generation) |
+| **AI** | Groq SDK — GPT-OSS 20B (scoring) & 120B (generation) |
 | **Documents** | `unpdf` (PDF text extraction), `@react-pdf/renderer` (resume rendering) |
 | **Payments** | Razorpay + Lemon Squeezy (webhook-driven) |
 | **Email** | Resend (transactional digests) |
