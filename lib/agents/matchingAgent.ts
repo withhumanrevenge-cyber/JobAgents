@@ -68,8 +68,16 @@ ${candidateContext}`
   }
 }
 
-const BATCH_LIMIT = 8
+const BATCH_LIMIT = 24
 const CONCURRENCY = 4
+
+const COUNTRY_ISO_TO_NAME: Record<string, string> = {
+  US: "United States", GB: "United Kingdom", CA: "Canada", DE: "Germany",
+  FR: "France", IN: "India", AU: "Australia", NL: "Netherlands",
+  SG: "Singapore", AE: "United Arab Emirates", ZA: "South Africa",
+  NZ: "New Zealand", PL: "Poland", IE: "Ireland", ES: "Spain",
+  IT: "Italy", MX: "Mexico", BR: "Brazil", CH: "Switzerland",
+}
 
 export async function matchJobsForUser(
   userId: string,
@@ -102,11 +110,15 @@ export async function matchJobsForUser(
 
   let jobsQuery = supabase
     .from("jobs")
-    .select("id, title, company, location, tags, description, posted_date, source")
+    .select("id, title, company, location, tags, description, posted_date, source, country")
     .order("posted_date", { ascending: false })
     .limit(600)
   if (!PLAN_CONFIG[effectivePlan(profile)].allSources) {
     jobsQuery = jobsQuery.eq("source", "adzuna")
+  }
+  const targetCountryName = profile.target_country ? COUNTRY_ISO_TO_NAME[profile.target_country.toUpperCase()] : null
+  if (targetCountryName) {
+    jobsQuery = jobsQuery.eq("country", targetCountryName)
   }
 
   const { data: recentJobs, error: jobsError } = await jobsQuery
