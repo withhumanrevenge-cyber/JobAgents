@@ -14,7 +14,7 @@ export type AccountType = 'seeker' | 'recruiter'
 export type PostingStatus = 'open' | 'closed'
 export type CandidateStatus = 'new' | 'shortlisted' | 'contacted' | 'rejected'
 
-export type JobSource = 'remotive' | 'adzuna' | 'jsearch'
+export type JobSource = 'remotive' | 'adzuna' | 'jsearch' | 'greenhouse' | 'lever' | 'ashby'
 export type JobType = 'remote' | 'hybrid' | 'onsite' | 'unknown'
 export type ExperienceLevel = 'entry' | 'mid' | 'senior' | 'lead' | 'unknown'
 export type TimeFilter = '24h' | '7d' | '30d' | 'all'
