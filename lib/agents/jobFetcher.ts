@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server"
 import { Job, JobSource, JobType, ExperienceLevel } from "@/types"
 import { ADZUNA_SUPPORTED, COUNTRY_NAME, DEFAULT_COUNTRY } from "@/lib/countries"
+import { fetchAtsJobs } from "@/lib/agents/atsScraper"
 
 export const DEFAULT_QUERIES = [
   "software engineer",
@@ -300,11 +301,12 @@ export async function syncAllJobs(
   countries?: string | string[],
   opts?: { sources?: JobSource[]; adzunaPages?: number },
 ): Promise<{ fetched: number; new: number; duplicates: number }> {
-  const sources = opts?.sources ?? ["remotive", "adzuna", "jsearch"]
+  const sources = opts?.sources ?? ["remotive", "adzuna", "jsearch", "greenhouse", "lever", "ashby"]
   const adzunaPages = opts?.adzunaPages ?? 5
   const useRemotive = sources.includes("remotive")
   const useAdzuna   = sources.includes("adzuna")
   const useJSearch  = sources.includes("jsearch")
+  const useAts      = sources.includes("greenhouse") || sources.includes("lever") || sources.includes("ashby")
 
   const roleQueries: (string | undefined)[] = Array.isArray(queries)
     ? (queries.length > 0 ? queries : [undefined])
@@ -325,8 +327,15 @@ export async function syncAllJobs(
   const remotiveResults = useRemotive
     ? await Promise.all(roleQueries.map((q) => fetchRemotiveJobs(q)))
     : []
+  // ATS is company-list-driven, not query/country-driven — fetch once regardless
+  // of how many queries or countries were requested.
+  const atsResults = useAts ? await fetchAtsJobs() : []
+  // Respect an explicit source subset by filtering the ATS output down.
+  const filteredAts = useAts
+    ? atsResults.filter((j) => j.source && sources.includes(j.source))
+    : []
 
-  const fetched: Partial<Job>[] = [...perPairResults.flat(2), ...remotiveResults.flat()]
+  const fetched: Partial<Job>[] = [...perPairResults.flat(2), ...remotiveResults.flat(), ...filteredAts]
 
   const seen = new Set<string>()
   const allRawJobs = fetched.filter(isRecent).filter((j) => {

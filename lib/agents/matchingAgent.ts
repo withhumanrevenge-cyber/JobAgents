@@ -43,12 +43,27 @@ Company: ${job.company}
 Location: ${job.location || "Remote"}
 Required Skills/Tags: ${job.tags.join(", ")}
 Description:
-${job.description?.slice(0, 2000) || "No description provided."}
+${job.description?.slice(0, 900) || "No description provided."}
 
 CANDIDATE:
 ${candidateContext}`
 
-  const response = await callGroq(userPrompt, systemPrompt, { model: FAST_MODEL, meterUserId: profile.user_id })
+  // Groq's free tier caps tokens-per-minute aggressively; a 429 is transient
+  // and usually clears in <5s. Retry once with a short back-off before giving up.
+  let response = ""
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await callGroq(userPrompt, systemPrompt, { model: FAST_MODEL, meterUserId: profile.user_id, maxTokens: 700 })
+      break
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (attempt === 0 && /rate|429|quota/i.test(msg)) {
+        await new Promise((r) => setTimeout(r, 4000))
+        continue
+      }
+      throw err
+    }
+  }
 
   const parsed = parseJsonFromGroq<MatchScoreResult>(response)
   if (parsed && typeof parsed.score === "number") {
@@ -118,7 +133,9 @@ export async function matchJobsForUser(
   }
   const targetCountryName = profile.target_country ? COUNTRY_ISO_TO_NAME[profile.target_country.toUpperCase()] : null
   if (targetCountryName) {
-    jobsQuery = jobsQuery.eq("country", targetCountryName)
+    // Include Worldwide/Remote listings so users still see global-remote roles
+    // (Anthropic-style) alongside their local market.
+    jobsQuery = jobsQuery.in("country", [targetCountryName, "Worldwide"])
   }
 
   const { data: recentJobs, error: jobsError } = await jobsQuery

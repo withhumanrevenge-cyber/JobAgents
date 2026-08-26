@@ -115,8 +115,11 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
 
           <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} className={selectCls}>
             <option value="all">All sources</option>
-            <option value="remotive">{SOURCE_LABEL.remotive}</option>
             <option value="adzuna">{SOURCE_LABEL.adzuna}</option>
+            <option value="greenhouse">{SOURCE_LABEL.greenhouse}</option>
+            <option value="lever">{SOURCE_LABEL.lever}</option>
+            <option value="ashby">{SOURCE_LABEL.ashby}</option>
+            <option value="remotive">{SOURCE_LABEL.remotive}</option>
             <option value="jsearch">{SOURCE_LABEL.jsearch}</option>
           </select>
 
