@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       for (const profile of targetProfiles) {
         if (Date.now() - startedAt > 45_000) break
         try {
-          const stats = await matchJobsForUser(profile.user_id, { limit: 8 })
+          const stats = await matchJobsForUser(profile.user_id, { limit: 20 })
           matchStats[profile.user_id] = stats
 
           if (!profile.email_notifications || !profile.email || stats.matched === 0) {
