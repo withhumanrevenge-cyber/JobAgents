@@ -123,27 +123,48 @@ export async function matchJobsForUser(
 
   const matchedJobIds = new Set((matchedJobIdsData || []).map((m) => m.job_id))
 
-  let jobsQuery = supabase
-    .from("jobs")
-    .select("id, title, company, location, tags, description, posted_date, source, country")
-    .order("posted_date", { ascending: false })
-    .limit(600)
-  if (!PLAN_CONFIG[effectivePlan(profile)].allSources) {
-    jobsQuery = jobsQuery.eq("source", "adzuna")
-  }
+  const plan = effectivePlan(profile)
+  const sources = PLAN_CONFIG[plan].allSources
+    ? ["adzuna", "greenhouse", "lever", "ashby"] as const
+    : ["adzuna"] as const
   const targetCountryName = profile.target_country ? COUNTRY_ISO_TO_NAME[profile.target_country.toUpperCase()] : null
-  if (targetCountryName) {
-    // Include Worldwide/Remote listings so users still see global-remote roles
-    // (Anthropic-style) alongside their local market.
-    jobsQuery = jobsQuery.in("country", [targetCountryName, "Worldwide"])
-  }
 
-  const { data: recentJobs, error: jobsError } = await jobsQuery
-  if (jobsError || !recentJobs || recentJobs.length === 0) {
+  // Fair-share pool: pull up to PER_SOURCE_POOL rows from EACH enabled source so
+  // one high-volume source (Adzuna) can't crowd out the others in the 600-row
+  // Supabase cap. Merged pool feeds the unmatched filter + per-run cap below.
+  const PER_SOURCE_POOL = 400
+  const perSourceResults = await Promise.all(sources.map(async (s) => {
+    let q = supabase
+      .from("jobs")
+      .select("id, title, company, location, tags, description, posted_date, source, country")
+      .eq("source", s)
+      .order("posted_date", { ascending: false })
+      .limit(PER_SOURCE_POOL)
+    if (targetCountryName) {
+      q = q.in("country", [targetCountryName, "Worldwide"])
+    }
+    const { data } = await q
+    return data ?? []
+  }))
+  const recentJobs = perSourceResults.flat()
+  if (recentJobs.length === 0) {
     return { matched: 0, skipped: 0, remaining: 0 }
   }
 
-  const unmatchedJobsRaw = recentJobs.filter((j) => !matchedJobIds.has(j.id))
+  // Interleave sources so the per-run scoring cap spreads across sources instead
+  // of exhausting Adzuna first (which would happen with a simple flat/concat).
+  const bySrc: Record<string, typeof recentJobs> = {}
+  for (const j of recentJobs) (bySrc[j.source] ||= []).push(j)
+  const interleaved: typeof recentJobs = []
+  const maxLen = Math.max(...Object.values(bySrc).map((a) => a.length))
+  for (let i = 0; i < maxLen; i++) {
+    for (const s of sources) {
+      const row = bySrc[s]?.[i]
+      if (row) interleaved.push(row)
+    }
+  }
+
+  const unmatchedJobsRaw = interleaved.filter((j) => !matchedJobIds.has(j.id))
   if (unmatchedJobsRaw.length === 0) {
     return { matched: 0, skipped: 0, remaining: 0 }
   }
