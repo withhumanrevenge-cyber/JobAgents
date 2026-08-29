@@ -159,7 +159,7 @@ export default function SettingsPage() {
               <select value={targetCountry} onChange={e => setTargetCountry(e.target.value)} className={inputCls}>
                 {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
               </select>
-              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">Adzuna and JSearch are searched in this country. Remotive (remote-only) is always included.</p>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">Adzuna is searched in this country. Direct ATS listings (Greenhouse, Lever, Ashby) are global and always included.</p>
             </div>
 
             <div>

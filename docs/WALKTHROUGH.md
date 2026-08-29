@@ -34,7 +34,7 @@ Finishing kicks off a background job search so the dashboard isn't empty on arri
 
 ## 4. Jobs (`/jobs`)
 
-- **Find new jobs** (top bar) — pulls fresh listings from Remotive, Adzuna, and JSearch for your target roles and country, then AI-scores each one against your resume (0–100) with live progress ("Matching… N left").
+- **Find new jobs** (top bar) — pulls fresh listings from Adzuna and the public ATS APIs of top tech companies (Greenhouse, Lever, Ashby) for your target roles and country, then AI-scores each one against your resume (0–100) with live progress ("Matching… N left").
   - If you've set the **country filter** to a specific country, the search fetches for *that* country; otherwise it uses your Settings country.
 - **Filters** — Remote/Hybrid/On-site tabs, search, country, region, experience level, posted date (24h / 7d / 30d), status, source.
 - Table or card view. Each row: role, **match score badge**, location, posted date, status.
@@ -80,5 +80,5 @@ Your pipeline. Every applied job with score, applied date, and a stage dropdown 
 
 - **Daily cron (6:00 UTC)** — refreshes the job pool for every user's roles/countries, tops up Indian listings, scores new jobs for digest subscribers, and sends match-digest emails.
 - **Jobs stay fresh** — anything older than 30 days is never stored or shown.
-- **Plans**: Free (15 credits/mo, Remotive only, top 25 matches) · Pro ₹399/$12 (100 credits, all sources & countries, 150 matches) · Premium ₹799/$24 (300 credits, 300 jobs scored/run, 2,000 matches).
+- **Plans**: Free (15 credits/mo, Adzuna only, top 25 matches) · Pro ₹399/$12 (100 credits, all sources & countries, 150 matches) · Premium ₹799/$24 (300 credits, 300 jobs scored/run, 2,000 matches).
 - Payments: Razorpay (UPI/INR) + Lemon Squeezy (global cards), webhook-driven; the plan updates automatically on payment.
