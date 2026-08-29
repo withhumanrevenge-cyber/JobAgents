@@ -35,9 +35,7 @@ export const JOB_TYPE_TONE: Record<JobType, string> = {
 }
 
 export const SOURCE_LABEL: Record<JobSource, string> = {
-  remotive:   "Remotive",
   adzuna:     "Adzuna",
-  jsearch:    "JSearch",
   greenhouse: "Greenhouse",
   lever:      "Lever",
   ashby:      "Ashby",

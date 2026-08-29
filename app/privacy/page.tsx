@@ -42,7 +42,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Supabase</strong> — authentication, database, and resume file storage.</li>
           <li><strong>Groq</strong> — AI processing. Your resume text and job descriptions are sent to Groq to parse, score, and generate documents.</li>
-          <li><strong>Remotive, Adzuna, JSearch</strong> — job sources. We send only your search terms (role, country), never your resume.</li>
+          <li><strong>Adzuna</strong> and public ATS APIs (<strong>Greenhouse, Lever, Ashby</strong>) — job sources. We send only your search terms (role, country), never your resume.</li>
           <li><strong>Resend</strong> — sending email digests.</li>
           <li><strong>Razorpay</strong> and <strong>Lemon Squeezy</strong> — payment processing for paid plans.</li>
           <li><strong>Google</strong> — optional sign-in (OAuth). We receive your name and email.</li>

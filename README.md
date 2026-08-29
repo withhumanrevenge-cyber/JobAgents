@@ -47,7 +47,7 @@ Built as a production-grade, full-stack SaaS: authentication, a credit-metered b
 ## Features
 
 - **Resume intelligence** — Upload a PDF; it's parsed into structured data (skills, experience, education, target role) the rest of the app reasons over.
-- **Multi-source job aggregation** — Deduplicated listings from **Remotive, Adzuna, and JSearch**, scoped by role and country, refreshed daily and capped to the last 30 days so the feed never goes stale.
+- **Multi-source job aggregation** — Deduplicated listings from **Adzuna** plus direct public ATS APIs (**Greenhouse, Lever, Ashby** — Anthropic, Stripe, Databricks, Linear, OpenAI, and 30+ more), scoped by role and country, refreshed daily.
 - **AI match scoring** — Every job is scored 0–100 against the user's resume with a clear reason and matched/missing-skill breakdown.
 - **One-click Smart Apply** — Generates a job-tailored, ATS-scored resume **and** a personalized cover letter together, ready to submit.
 - **Interview prep** — Role- and company-specific questions (technical, behavioral, situational) with coaching tips.
@@ -65,7 +65,7 @@ Built as a production-grade, full-stack SaaS: authentication, a credit-metered b
 ```mermaid
 flowchart LR
     R["Resume PDF"] -->|unpdf + Groq| P["Structured Profile"]
-    SRC["Remotive · Adzuna · JSearch"] --> POOL[("Jobs Pool")]
+    SRC["Adzuna · Greenhouse · Lever · Ashby"] --> POOL[("Jobs Pool")]
     P --> MA{"Matching Agent"}
     POOL --> MA
     MA -->|"score 0–100"| FEED["Personalized Feed"]
@@ -104,7 +104,7 @@ A few engineering decisions worth calling out:
 
 ## Getting Started
 
-**Prerequisites:** Node.js 22.x, a Supabase project, and API keys for Groq, Adzuna, and JSearch (RapidAPI). Resend and the payment processors are optional for local development.
+**Prerequisites:** Node.js 22.x, a Supabase project, and API keys for Groq and Adzuna. Resend and the payment processors are optional for local development.
 
 ```bash
 # 1. Clone and install

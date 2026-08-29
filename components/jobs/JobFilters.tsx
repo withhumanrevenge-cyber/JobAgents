@@ -119,8 +119,6 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
             <option value="greenhouse">{SOURCE_LABEL.greenhouse}</option>
             <option value="lever">{SOURCE_LABEL.lever}</option>
             <option value="ashby">{SOURCE_LABEL.ashby}</option>
-            <option value="remotive">{SOURCE_LABEL.remotive}</option>
-            <option value="jsearch">{SOURCE_LABEL.jsearch}</option>
           </select>
 
           <button onClick={resetFilters} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1.5 transition-colors">
