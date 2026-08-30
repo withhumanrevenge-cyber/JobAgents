@@ -116,12 +116,22 @@ export async function matchJobsForUser(
     throw new Error("Upload your resume (or set target roles in Settings) so the AI can score jobs against you.")
   }
 
-  const { data: matchedJobIdsData } = await supabase
-    .from("matches")
-    .select("job_id")
-    .eq("user_id", userId)
-
-  const matchedJobIds = new Set((matchedJobIdsData || []).map((m) => m.job_id))
+  // Paginate through all matched job_ids — Supabase PostgREST caps a single
+  // response at 1,000 rows and a heavy user can accumulate 10k+ matches. Missing
+  // any of those IDs would make already-scored jobs look "unmatched", and every
+  // re-score attempt would then die on the (user_id, job_id) unique constraint.
+  const matchedJobIds = new Set<string>()
+  const PAGE = 1000
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await supabase
+      .from("matches")
+      .select("job_id")
+      .eq("user_id", userId)
+      .range(offset, offset + PAGE - 1)
+    if (error || !data || data.length === 0) break
+    for (const m of data) matchedJobIds.add(m.job_id)
+    if (data.length < PAGE) break
+  }
 
   const plan = effectivePlan(profile)
   const sources = PLAN_CONFIG[plan].allSources
@@ -190,7 +200,9 @@ export async function matchJobsForUser(
     const passedThreshold = matchResult.score >= profile.match_threshold
     const status: JobStatus = passedThreshold ? "reviewed" : "skipped"
 
-    const { error: insertError } = await supabase.from("matches").insert({
+    // Upsert instead of insert so a stale `matchedJobIds` set (or a concurrent
+    // scoring run) doesn't kill the row with a unique-constraint violation.
+    const { error: insertError } = await supabase.from("matches").upsert({
       user_id: userId,
       job_id: job.id,
       match_score: matchResult.score,
@@ -199,7 +211,7 @@ export async function matchJobsForUser(
       missing_skills: matchResult.missing_skills,
       status,
       applied_at: null,
-    })
+    }, { onConflict: "user_id,job_id", ignoreDuplicates: true })
 
     if (insertError) {
       console.error(`Failed to save match for job ${job.id}:`, insertError.message)
