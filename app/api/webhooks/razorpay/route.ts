@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
+import { createServiceClient } from "@/lib/supabase/server"
 import { applyPlan, revokeBySubscription } from "@/lib/billing/grant"
 
 export async function POST(request: Request) {
@@ -19,6 +20,21 @@ export async function POST(request: Request) {
 
   const event = JSON.parse(raw)
   const type: string = event?.event ?? ""
+  const eventId: string = event?.id ?? ""
+
+  // Idempotency: check if we've already processed this event
+  const svc = createServiceClient()
+  if (eventId) {
+    const { data: existing } = await svc
+      .from("webhook_events")
+      .select("id")
+      .eq("provider", "razorpay")
+      .eq("event_id", eventId)
+      .single()
+    if (existing) {
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
+  }
 
   try {
     if (type === "subscription.activated" || type === "subscription.charged") {
@@ -36,6 +52,16 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Razorpay webhook handler error:", err)
     return NextResponse.json({ error: "Handler error" }, { status: 500 })
+  }
+
+  // Record processed event
+  if (eventId) {
+    await svc.from("webhook_events").insert({
+      provider: "razorpay",
+      event_id: eventId,
+      event_type: type,
+      payload: event,
+    })
   }
 
   return NextResponse.json({ ok: true })
