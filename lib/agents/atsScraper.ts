@@ -68,25 +68,38 @@ function detectExperienceLevel(title: string): ExperienceLevel {
 function decodeEntities(input: string): string {
   return input
     .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, "\"")
+    .replace(/'/g, "'")
+    .replace(/'/g, "'")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
 }
 
-// Some sources (Greenhouse's `content` field) return HTML whose angle brackets
-// are themselves entity-encoded. We MUST decode entities before stripping tags,
-// otherwise `<div>` hidden as `&lt;div&gt;` survives the tag regex and leaks
-// markup into the description.
+// Robust HTML sanitizer - strips all tags but preserves text content
+// Handles double-encoded entities and malformed HTML
 function stripHtml(input: string): string {
-  const decoded = decodeEntities(decodeEntities(input))
-  return decoded
+  if (!input) return ""
+
+  // Decode entities recursively until no more changes
+  let decoded = input
+  let previous = ""
+  while (decoded !== previous) {
+    previous = decoded
+    decoded = decodeEntities(decoded)
+  }
+
+  // Remove script and style tags entirely (including content)
+  decoded = decoded
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
+
+  // Remove all other tags but preserve their text content
+  decoded = decoded.replace(/<[^>]+>/g, " ")
+
+  // Normalize whitespace
+  return decoded
     .replace(/\s+/g, " ")
     .trim()
 }

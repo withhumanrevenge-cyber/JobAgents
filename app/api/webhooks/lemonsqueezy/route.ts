@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
+import { createServiceClient } from "@/lib/supabase/server"
 import { applyPlan, revokeBySubscription } from "@/lib/billing/grant"
 import { planFromLemonVariant } from "@/lib/billing/config"
 
@@ -25,6 +26,21 @@ export async function POST(request: Request) {
   const variantId = attrs?.variant_id ?? attrs?.first_order_item?.variant_id
   const subscriptionId = String(event?.data?.id ?? "")
   const customerId = String(attrs?.customer_id ?? "")
+  const eventId: string = event?.meta?.event_id ?? event?.data?.id ?? ""
+
+  // Idempotency: check if we've already processed this event
+  const svc = createServiceClient()
+  if (eventId) {
+    const { data: existing } = await svc
+      .from("webhook_events")
+      .select("id")
+      .eq("provider", "lemonsqueezy")
+      .eq("event_id", eventId)
+      .single()
+    if (existing) {
+      return NextResponse.json({ ok: true, duplicate: true })
+    }
+  }
 
   try {
     if (["subscription_created", "subscription_updated", "subscription_payment_success"].includes(eventName)) {
@@ -38,6 +54,16 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Lemon Squeezy webhook handler error:", err)
     return NextResponse.json({ error: "Handler error" }, { status: 500 })
+  }
+
+  // Record processed event
+  if (eventId) {
+    await svc.from("webhook_events").insert({
+      provider: "lemonsqueezy",
+      event_id: eventId,
+      event_type: eventName,
+      payload: event,
+    })
   }
 
   return NextResponse.json({ ok: true })

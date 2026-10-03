@@ -40,18 +40,19 @@ export function useProfile() {
         let data = existingData
 
         if (fetchError && fetchError.code === "PGRST116") {
-          const { data: newProfile, error: insertError } = await supabase
+          // Use upsert to handle race conditions - atomic insert or update
+          const { data: newProfile, error: upsertError } = await supabase
             .from("profiles")
-            .insert({
+            .upsert({
               user_id: user.id,
               full_name: user.user_metadata?.full_name || "",
               match_threshold: 70,
               auto_apply: false,
-            })
+            }, { onConflict: "user_id" })
             .select()
             .single()
 
-          if (insertError) throw insertError
+          if (upsertError) throw upsertError
           data = newProfile
         } else if (fetchError) {
           throw fetchError
