@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from app.auth import AuthUser, admin_user
@@ -58,6 +58,14 @@ async def overview(_: AuthUser = Depends(admin_user)) -> dict:
         "smartAppliesThisMonth": _action_counts(events)["smart_apply"],
         "mrr": by_plan["pro"] * PLAN_CONFIG["pro"]["priceUsd"] + by_plan["premium"] * PLAN_CONFIG["premium"]["priceUsd"],
     }
+
+
+@router.get("/funnel")
+async def funnel(days: int = Query(90, ge=7, le=365), _: AuthUser = Depends(admin_user)) -> dict:
+    """Signup-to-interview funnel for one signup cohort, and Proof of Fit outcomes
+    (supabase/migrations/013_admin_funnel.sql)."""
+    db = await get_db()
+    return (await db.rpc("admin_funnel", {"p_days": days}).execute()).data or {}
 
 
 @router.get("/users")

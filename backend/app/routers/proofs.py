@@ -140,6 +140,12 @@ async def start_proof(body: StartBody, user: AuthUser = Depends(ai_user)) -> dic
     existing = await first(q.eq("role_title", target["role_title"]))
     if existing:
         return _view(existing)
+    if target["posting_id"]:
+        # One proof per invitation: retaking until the score looks good would hide the real one.
+        done = await first(db.table("skill_proofs").select("id").eq("user_id", user.id)
+                           .eq("posting_id", target["posting_id"]).eq("status", "completed"))
+        if done:
+            raise ApiError(409, "You've already finished the proof for this role.")
 
     plan = effective_plan(profile)
     limit = PLAN_CONFIG[plan]["proofsPerMonth"]
