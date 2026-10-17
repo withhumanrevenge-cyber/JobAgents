@@ -5,11 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.errors import install_error_handlers
+from app.observability import init_sentry
 from app.routers import admin, ai_settings, applications, billing, hire, jobs, misc, resume
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 settings = get_settings()
+init_sentry()
 
 app = FastAPI(
     title="JobAgent API",

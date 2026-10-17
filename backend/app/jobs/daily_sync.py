@@ -129,5 +129,8 @@ async def run_daily_sync(time_budget_s: int = 25 * 60) -> dict[str, Any]:
 
 
 if __name__ == "__main__":
+    from app.observability import init_sentry
+
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    init_sentry()
     print(asyncio.run(run_daily_sync()))
