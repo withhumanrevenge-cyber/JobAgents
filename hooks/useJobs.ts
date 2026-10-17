@@ -64,7 +64,7 @@ export function useJobs() {
   }, [supabase])
 
   useEffect(() => {
-    fetchJobsAndMatches(true)
+    void Promise.resolve().then(() => fetchJobsAndMatches(true))
   }, [fetchJobsAndMatches])
 
   useEffect(() => {

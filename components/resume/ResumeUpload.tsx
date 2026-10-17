@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react"
 import { Upload, FileText, CheckCircle, Loader2, AlertTriangle } from "lucide-react"
 import { ParsedResume } from "@/types"
 import { openStoredResume } from "@/lib/resume"
+import { apiFetch } from "@/lib/api"
 
 interface ResumeUploadProps {
   onParsed?: (resume: ParsedResume, url: string) => void
@@ -27,7 +28,7 @@ export function ResumeUpload({ onParsed, compact = false, existingResumeUrl }: R
     const formData = new FormData()
     formData.append("resume", file)
     try {
-      const res  = await fetch("/api/resume/parse", { method: "POST", body: formData })
+      const res  = await apiFetch("/api/resume/parse", { method: "POST", body: formData })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to parse resume.")
       setParsed(data.parsed_resume)

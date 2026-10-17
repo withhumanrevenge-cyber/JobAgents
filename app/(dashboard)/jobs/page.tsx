@@ -19,14 +19,16 @@ export default function JobsPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const { searchQuery, statusFilter, sourceFilter, jobTypeFilter, countryFilter, regionFilter, experienceFilter, timeFilter } = useDashboardStore()
 
+  // Fixed when the page opens, so filtering doesn't read the clock on every render.
+  const [openedAt] = useState(() => Date.now())
   const cutoffMs = TIME_THRESHOLD_MS[timeFilter]
-  const cutoff = Number.isFinite(cutoffMs) ? Date.now() - cutoffMs : Number.NEGATIVE_INFINITY
+  const cutoff = Number.isFinite(cutoffMs) ? openedAt - cutoffMs : Number.NEGATIVE_INFINITY
 
   const filteredMatches = allJobRows
     .filter((match) => {
       const job = match.job
       if (!job) return false
-      const q = `${job.title} ${job.company} ${job.tags.join(" ")}`.toLowerCase()
+      const q = `${job.title} ${job.company} ${(job.tags ?? []).join(" ")}`.toLowerCase()
       const postedAfter = !Number.isFinite(cutoffMs)
         || (job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : true)
       return (searchQuery === "" || q.includes(searchQuery.toLowerCase()))

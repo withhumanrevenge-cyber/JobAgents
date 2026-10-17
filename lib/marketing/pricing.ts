@@ -25,19 +25,20 @@ function priceLabel(currency: Currency, usd: number, inrPaise: number): string {
 }
 
 export function getPricingTiers(currency: Currency = "USD"): MarketingTier[] {
+  const free = PLAN_CONFIG.free
   return [
     {
-      name: PLAN_CONFIG.free.label,
+      name: free.label,
       priceLabel: priceLabel(currency, 0, 0),
       period: "forever",
-      description: "Everything you need to start your search.",
+      description: "Bring your own AI key and use everything, without limits.",
       features: [
-        `${PLAN_CONFIG.free.credits} credits / month`,
-        `Up to ${fmt(PLAN_CONFIG.free.maxVisibleMatches)} job matches in your feed`,
-        `${PLAN_CONFIG.free.matchPerRun} jobs scored per search`,
-        "Adzuna jobs (broad market)",
-        "Resume parsing & match scoring — free",
-        "Application tracker",
+        "Unlimited Smart Apply, resume tailoring & interview prep on your own AI key",
+        "Works with Groq, Gemini, OpenAI, Claude or OpenRouter (Groq and Gemini keys are free)",
+        `${free.matchPerRun} jobs scored per search; daily matching on your key`,
+        "Adzuna + company career pages, all countries",
+        "Application tracker and email digests",
+        `No key yet? Try it with ${free.credits} hosted credits a month`,
       ],
       cta: "Get started",
       href: "/signup",
@@ -47,15 +48,13 @@ export function getPricingTiers(currency: Currency = "USD"): MarketingTier[] {
       name: PLAN_CONFIG.pro.label,
       priceLabel: priceLabel(currency, PLAN_CONFIG.pro.priceUsd, PRICING.proInrPaise),
       period: "per month",
-      description: "For active job seekers who want every edge.",
+      description: "No key to manage. We run the AI for you.",
       features: [
-        `${PLAN_CONFIG.pro.credits} credits / month`,
-        `Up to ${fmt(PLAN_CONFIG.pro.maxVisibleMatches)} job matches in your feed`,
+        `${PLAN_CONFIG.pro.credits} hosted AI credits a month`,
+        "Or use your own key and keep your credits",
         `${PLAN_CONFIG.pro.matchPerRun} jobs scored per search`,
-        "All sources — Adzuna + direct ATS (Greenhouse, Lever, Ashby)",
-        "All countries",
-        "Smart Apply, resume tailoring & interview prep",
-        "Email alerts for new matches",
+        "New jobs scored for you every day, with email digests",
+        `Up to ${fmt(PLAN_CONFIG.pro.maxVisibleMatches)} matches in your feed`,
       ],
       cta: "Upgrade to Pro",
       href: "/signup",
@@ -65,13 +64,13 @@ export function getPricingTiers(currency: Currency = "USD"): MarketingTier[] {
       name: PLAN_CONFIG.premium.label,
       priceLabel: priceLabel(currency, PLAN_CONFIG.premium.priceUsd, PRICING.premiumInrPaise),
       period: "per month",
-      description: "Maximum volume for a full-time search.",
+      description: "Hosted AI for a full-time search.",
       features: [
-        `${PLAN_CONFIG.premium.credits} credits / month`,
-        `Up to ${fmt(PLAN_CONFIG.premium.maxVisibleMatches)} job matches in your feed`,
+        `${PLAN_CONFIG.premium.credits} hosted AI credits a month`,
+        "Or use your own key and keep your credits",
         `${PLAN_CONFIG.premium.matchPerRun} jobs scored per search`,
+        `Up to ${fmt(PLAN_CONFIG.premium.maxVisibleMatches)} matches in your feed`,
         "Everything in Pro",
-        "Priority processing",
       ],
       cta: "Go Premium",
       href: "/signup",
@@ -83,4 +82,4 @@ export function getPricingTiers(currency: Currency = "USD"): MarketingTier[] {
 export const CREDIT_SUMMARY =
   (Object.keys(CREDIT_COST) as UsageAction[])
     .map((a) => `${ACTION_LABEL[a]} ${CREDIT_COST[a]}`)
-    .join(" · ") + " credits · matching is free"
+    .join(" · ") + " hosted credits · free with your own AI key"

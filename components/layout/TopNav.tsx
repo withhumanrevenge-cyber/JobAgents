@@ -8,6 +8,9 @@ import { useDashboardStore } from "@/store/dashboardStore"
 import { COUNTRIES, COUNTRY_NAME } from "@/lib/countries"
 import { Loader2, RefreshCw, Check, AlertTriangle, Menu } from "lucide-react"
 import { spring } from "@/lib/motion"
+import { apiFetch } from "@/lib/api"
+import { scoreNewJobs, AIKeyError } from "@/lib/scoreJobs"
+import Link from "next/link"
 
 const PAGE_NAMES: Record<string, string> = {
   "/dashboard":    "Dashboard",
@@ -24,6 +27,8 @@ export function TopNav() {
   const [syncStatus, setSyncStatus] = useState<"idle" | "fetching" | "scoring" | "done">("idle")
   const [syncError, setSyncError]   = useState<string | null>(null)
   const [syncSummary, setSyncSummary] = useState<string | null>(null)
+  // The last problem is fixed in Settings → AI provider (key, quota, or the free trial limit).
+  const [needsAI, setNeedsAI]       = useState(false)
   const [scoreLeft, setScoreLeft]   = useState<number | null>(null)
 
   useEffect(() => {
@@ -39,12 +44,13 @@ export function TopNav() {
     setSyncStatus("fetching")
     setSyncError(null)
     setSyncSummary(null)
+    setNeedsAI(false)
     setSyncing(true)
     try {
       const filterCode = countryFilter !== "all"
         ? COUNTRIES.find((c) => c.name === countryFilter)?.code
         : undefined
-      const fetchRes = await fetch("/api/jobs/fetch", {
+      const fetchRes = await apiFetch("/api/jobs/fetch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(filterCode ? { country: filterCode } : {}),
@@ -54,48 +60,30 @@ export function TopNav() {
         throw new Error(fetchData.error || "Failed to fetch jobs.")
       }
       setSyncStatus("scoring")
-      let totalScored = 0
-      let consecutiveFailures = 0
-      for (let i = 0; i < 40; i++) {
-        let matchRes: Response
-        let matchData: { matched?: number; skipped?: number; remaining?: number; error?: string }
-        try {
-          matchRes = await fetch("/api/match", { method: "POST" })
-          matchData = await matchRes.json()
-        } catch {
-          // Network hiccup or a batch that got killed by the platform timeout — a handful of
-          // jobs may still have been scored server-side before the kill. Don't treat this as a
-          // total failure; retry a couple of times before giving up.
-          consecutiveFailures++
-          if (consecutiveFailures >= 3) break
-          continue
-        }
-        if (!matchRes.ok) {
-          if (matchRes.status === 400) throw new Error(matchData?.error || "Scoring failed.")
-          consecutiveFailures++
-          if (consecutiveFailures >= 3) break
-          continue
-        }
-        consecutiveFailures = 0
-        totalScored += (matchData.matched ?? 0) + (matchData.skipped ?? 0)
+      const { scored: totalScored, limited } = await scoreNewJobs((remaining) => {
         triggerRefresh()
-        const remaining = Number(matchData.remaining ?? 0)
         setScoreLeft(remaining)
-        if (remaining <= 0) break
-      }
+      })
       setScoreLeft(null)
       setSyncStatus("done")
       const cc = fetchData.country || "US"
       const summary = totalScored > 0
         ? `${fetchData.new ?? 0} new jobs from ${COUNTRY_NAME[cc] || cc} · ${totalScored} scored`
         : `${fetchData.new ?? 0} new jobs from ${COUNTRY_NAME[cc] || cc}`
-      setSyncSummary(summary)
-      setTimeout(() => { setSyncStatus("idle"); setSyncSummary(null) }, 6000)
+      if (limited) {
+        setNeedsAI(true)
+        setSyncSummary(`${summary} · free trial limit reached. Add your own AI key to score more.`)
+        setTimeout(() => { setSyncStatus("idle"); setSyncSummary(null); setNeedsAI(false) }, 12000)
+      } else {
+        setSyncSummary(summary)
+        setTimeout(() => { setSyncStatus("idle"); setSyncSummary(null) }, 6000)
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Job search failed. Please try again."
       setSyncError(msg)
+      setNeedsAI(err instanceof AIKeyError)
       setSyncStatus("idle")
-      setTimeout(() => setSyncError(null), 8000)
+      setTimeout(() => { setSyncError(null); setNeedsAI(false) }, 12000)
     } finally {
       setSyncing(false)
       setScoreLeft(null)
@@ -133,7 +121,8 @@ export function TopNav() {
               className="flex items-center gap-1.5 text-[11px] text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-md max-w-[44vw] sm:max-w-[320px]"
             >
               <AlertTriangle className="w-3 h-3 shrink-0" />
-              <span className="truncate">{syncError}</span>
+              <span className="truncate" title={syncError}>{syncError}</span>
+              {needsAI && <Link href="/settings#ai" className="underline font-medium shrink-0">Fix</Link>}
             </motion.div>
           )}
           {syncSummary && !syncError && (
@@ -146,7 +135,8 @@ export function TopNav() {
               className="flex items-center gap-1.5 text-[11px] text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-md max-w-[44vw] sm:max-w-none"
             >
               <Check className="w-3 h-3 shrink-0" />
-              <span className="truncate">{syncSummary}</span>
+              <span className="truncate" title={syncSummary}>{syncSummary}</span>
+              {needsAI && <Link href="/settings#ai" className="underline font-medium shrink-0">Add key</Link>}
             </motion.div>
           )}
         </AnimatePresence>

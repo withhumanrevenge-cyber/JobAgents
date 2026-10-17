@@ -71,7 +71,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 Sign in
               </Link>
             </div>
-            <p className="text-xs text-muted-foreground mt-5">No credit card required</p>
+            <p className="text-xs text-muted-foreground mt-5">Free forever with your own AI key · No credit card required</p>
           </Reveal>
 
           <div aria-hidden className="pointer-events-none absolute inset-x-0 -bottom-10 -z-10 mx-auto max-w-3xl blur-[120px] opacity-40">
