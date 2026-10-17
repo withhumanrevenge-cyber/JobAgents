@@ -53,6 +53,15 @@ envVarGroups:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      # Optional second provider for hosted AI when Groq fails, e.g. gemini.
+      - key: HOSTED_FALLBACK_PROVIDER
+        sync: false
+      - key: HOSTED_FALLBACK_API_KEY
+        sync: false
+      - key: HOSTED_FALLBACK_FAST_MODEL
+        sync: false
+      - key: HOSTED_FALLBACK_MODEL
+        sync: false
 
 services:
   - type: web

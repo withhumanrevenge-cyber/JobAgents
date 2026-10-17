@@ -8,6 +8,7 @@ Three modes:
 
 Free users with a key always use it. Paying users with a key choose (use_own_key)."""
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -52,7 +53,10 @@ class AIContext:
     async def call(self, prompt: str, system: str | None = None, *, fast: bool = False) -> str:
         model = self.fast_model if fast else self.quality_model
         try:
-            result = await llm.complete(self.provider, self.api_key, model, system, prompt, fast=fast)
+            if self.mode == "byok":
+                result = await llm.complete(self.provider, self.api_key, model, system, prompt, fast=fast)
+            else:
+                result = await _hosted_complete(self, model, system, prompt, fast)
         except llm.LLMAuthError:
             if self.mode == "byok":
                 await _mark_key(self.user_id, "invalid", "The provider rejected this key.")
@@ -79,6 +83,36 @@ class AIContext:
         return result.text
 
 
+_hosted_slots: asyncio.Semaphore | None = None
+
+
+def _slots() -> asyncio.Semaphore:
+    global _hosted_slots
+    if _hosted_slots is None:
+        _hosted_slots = asyncio.Semaphore(max(1, get_settings().HOSTED_MAX_CONCURRENCY))
+    return _hosted_slots
+
+
+async def _hosted_complete(ctx: AIContext, model: str, system: str | None, prompt: str, fast: bool) -> llm.Completion:
+    """A call on our key: capped in concurrency, and retried once on the fallback provider when
+    Groq fails for any reason, so a Groq outage or rate limit doesn't take hosted AI down."""
+    s = get_settings()
+    async with _slots():
+        try:
+            return await llm.complete(ctx.provider, ctx.api_key, model, system, prompt, fast=fast)
+        except llm.LLMError as e:
+            fallback = s.HOSTED_FALLBACK_PROVIDER
+            if not (fallback in llm.PROVIDERS and s.HOSTED_FALLBACK_API_KEY):
+                raise
+            fb_model = s.HOSTED_FALLBACK_FAST_MODEL if fast else s.HOSTED_FALLBACK_MODEL
+            if not fb_model:
+                raise
+            log.warning("Hosted %s failed (%s); using %s", ctx.provider, e.detail, fallback)
+            result = await llm.complete(fallback, s.HOSTED_FALLBACK_API_KEY, fb_model, system, prompt, fast=fast)
+            result.provider = fallback
+            return result
+
+
 async def _meter(ctx: AIContext, result: llm.Completion) -> None:
     if not result.tokens:
         return
@@ -88,7 +122,7 @@ async def _meter(ctx: AIContext, result: llm.Completion) -> None:
         db = await get_db()
         await db.table("usage_events").insert({
             "user_id": ctx.user_id, "action": action, "credits": 0,
-            "tokens": result.tokens, "model": f"{ctx.provider}:{result.model}",
+            "tokens": result.tokens, "model": f"{result.provider or ctx.provider}:{result.model}",
         }).execute()
     except Exception:
         log.warning("token metering failed", exc_info=True)

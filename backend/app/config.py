@@ -22,6 +22,15 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "openai/gpt-oss-120b"
     GROQ_FAST_MODEL: str = "openai/gpt-oss-20b"
+    # At most this many calls on our key at once, across all users, so one busy moment can't
+    # burn through Groq's per-minute limits for everyone.
+    HOSTED_MAX_CONCURRENCY: int = 8
+    # Optional second provider for hosted AI, used when Groq errors or rate-limits. Any id from
+    # app/services/llm.py PROVIDERS; empty disables the fallback.
+    HOSTED_FALLBACK_PROVIDER: str = ""
+    HOSTED_FALLBACK_API_KEY: str = ""
+    HOSTED_FALLBACK_FAST_MODEL: str = ""
+    HOSTED_FALLBACK_MODEL: str = ""
 
     # Fernet key(s) for users' own AI keys at rest, comma-separated, newest first.
     BYOK_ENCRYPTION_KEY: str = ""

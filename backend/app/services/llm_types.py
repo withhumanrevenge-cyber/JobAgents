@@ -6,6 +6,8 @@ class Completion:
     text: str
     tokens: int
     model: str
+    # Set when the call ran on a different provider than the caller's (the hosted fallback).
+    provider: str = ""
 
 
 class LLMError(Exception):
