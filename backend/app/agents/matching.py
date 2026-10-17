@@ -2,6 +2,9 @@
 
 import asyncio
 import logging
+import re
+import weakref
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -21,6 +24,15 @@ PER_SOURCE_POOL = 400
 # plan's matchPerRun caps jobs scored within one run. Clamped so a client can't send an old
 # timestamp to reset its budget.
 MAX_RUN_AGE = timedelta(minutes=15)
+
+# Title words that say nothing about the field, so "Senior Engineer" doesn't pull in every
+# senior role. Everything else in a target role counts.
+_GENERIC_ROLE_WORDS = {
+    "senior", "sr", "junior", "jr", "lead", "principal", "staff", "head", "intern", "internship",
+    "trainee", "associate", "fresher", "graduate", "entry", "level", "engineer", "developer",
+    "i", "ii", "iii", "iv", "and", "of", "the", "for", "in", "at", "to", "with",
+}
+_ROLE_WORD = re.compile(r"[a-z0-9+#.]+")
 
 SYSTEM_PROMPT = """You are a precise job-matching assistant. Score how well a candidate's resume matches a job description.
 Return ONLY valid JSON, no markdown, no explanation outside the JSON:
@@ -94,6 +106,53 @@ async def score_job(ai: AIContext, job: dict[str, Any], profile: dict[str, Any],
     }
 
 
+def _phrases(terms: set[str]) -> re.Pattern[str] | None:
+    if not terms:
+        return None
+    # Longest first, so "machine learning" wins over "machine"; whole words, so "go" isn't "google".
+    alts = "|".join(re.escape(t) for t in sorted(terms, key=len, reverse=True))
+    return re.compile(r"(?<![\w])(?:" + alts + r")(?![\w])")
+
+
+def relevance_scorer(profile: dict[str, Any], resume: dict[str, Any] | None) -> Callable[[dict[str, Any]], int] | None:
+    """A cheap keyword score of a job against the user's target roles and skills, used to pick
+    which jobs are worth an AI call. None when the user has nothing to match on."""
+    roles = [r.strip().lower() for r in (profile.get("target_roles") or []) if r and r.strip()]
+    if not roles and resume and resume.get("target_role"):
+        roles = [str(resume["target_role"]).strip().lower()]
+    role_words = {w for r in roles for w in _ROLE_WORD.findall(r) if w not in _GENERIC_ROLE_WORDS and len(w) > 1}
+    skills = {str(s).strip().lower() for s in ((resume or {}).get("skills") or [])[:40] if str(s).strip()}
+    role_re, skill_re = _phrases(role_words), _phrases(skills)
+    if not roles and not role_re and not skill_re:
+        return None
+
+    def score(job: dict[str, Any]) -> int:
+        title = (job.get("title") or "").lower()
+        text = " ".join([title, " ".join(str(t) for t in job.get("tags") or []),
+                         (job.get("description") or "")[:3000]]).lower()
+        points = sum(6 for r in roles if r in title)
+        if role_re:
+            points += 2 * len(set(role_re.findall(title)))
+        if skill_re:
+            points += len(set(skill_re.findall(text)))
+        return points
+
+    return score
+
+
+def rank_by_relevance(jobs: list[dict[str, Any]], scorer: Callable[[dict[str, Any]], int] | None) -> list[dict[str, Any]]:
+    """Most relevant first, dropping jobs with no overlap at all: those never get an AI call.
+    If nothing overlaps (an unusual resume), keep everything so the user still gets scores."""
+    if scorer is None:
+        return jobs
+    scored = [(scorer(j), j) for j in jobs]
+    relevant = [(s, j) for s, j in scored if s > 0]
+    if not relevant:
+        return jobs
+    # sort is stable: ties keep the pool's recency order.
+    return [j for _, j in sorted(relevant, key=lambda pair: -pair[0])]
+
+
 async def _matched_job_ids(user_id: str) -> set[str]:
     # PostgREST caps responses at 1000 rows; heavy users have far more matches than that.
     db = await get_db()
@@ -143,8 +202,23 @@ async def _scored_since(user_id: str, since: datetime) -> int:
     return res.count or 0
 
 
+# One run per user at a time: two tabs (or a double click) would otherwise pay to score the same
+# jobs twice. Weak values: a lock disappears once no request for that user holds it.
+_user_locks: "weakref.WeakValueDictionary[str, asyncio.Lock]" = weakref.WeakValueDictionary()
+
+
 async def match_jobs_for_user(
     user_id: str, *, limit: int | None = None, run_started_at: datetime | None = None
+) -> dict[str, Any]:
+    lock = _user_locks.get(user_id)
+    if lock is None:
+        lock = _user_locks[user_id] = asyncio.Lock()
+    async with lock:
+        return await _match_jobs_for_user(user_id, limit=limit, run_started_at=run_started_at)
+
+
+async def _match_jobs_for_user(
+    user_id: str, *, limit: int | None, run_started_at: datetime | None
 ) -> dict[str, Any]:
     db = await get_db()
     profile = await first(db.table("profiles").select("*").eq("user_id", user_id))
@@ -173,7 +247,7 @@ async def match_jobs_for_user(
     country_name = COUNTRY_NAME.get((profile.get("target_country") or "").upper())
     pool = await _candidate_pool(sources_for(plan), country_name)
     matched_ids = await _matched_job_ids(user_id)
-    unmatched = [j for j in pool if j["id"] not in matched_ids]
+    unmatched = rank_by_relevance([j for j in pool if j["id"] not in matched_ids], relevance_scorer(profile, resume))
 
     batch = unmatched[: min(limit or BATCH_LIMIT, budget)]
     threshold = profile.get("match_threshold")
