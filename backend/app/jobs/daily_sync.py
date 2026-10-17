@@ -12,9 +12,10 @@ from typing import Any
 
 from app.agents.job_fetcher import DEFAULT_QUERIES, sync_all_jobs
 from app.agents.matching import match_jobs_for_user
+from app.agents.proof import EXPIRES_AFTER_S, decline_feedback
 from app.db import first, get_db, select_all
 from app.plans import ALL_SOURCES, effective_plan
-from app.services.email import send_followup, send_match_digest
+from app.services.email import send_followup, send_match_digest, send_proof_decision
 
 log = logging.getLogger(__name__)
 
@@ -101,12 +102,54 @@ async def _followups() -> int:
     return sent
 
 
+async def _expire_decisions() -> int:
+    """The response guarantee: a finished proof the recruiter hasn't decided on by the deadline
+    is declined automatically, the candidate gets feedback from their report, and the miss
+    counts against the recruiter's response rate."""
+    db = await get_db()
+    now = datetime.now(timezone.utc).isoformat()
+    rows = await select_all(lambda: db.table("candidate_matches")
+                            .select("id, candidate_id, proof_id, posting:job_postings(title, company)")
+                            .eq("decision", "pending").not_.is_("decision_due_at", "null").lt("decision_due_at", now)
+                            .order("id"))
+    expired = 0
+    for r in rows:
+        proof = await first(db.table("skill_proofs").select("report").eq("id", r["proof_id"])) if r.get("proof_id") else None
+        feedback = ("The team didn't respond within the promised window, so this application is closed. "
+                    + decline_feedback((proof or {}).get("report")).removeprefix("The team decided not to move forward this time. "))
+        res = await db.table("candidate_matches").update({
+            "decision": "declined", "decided_by": "timeout", "decided_at": now, "feedback": feedback, "status": "rejected",
+        }).eq("id", r["id"]).eq("decision", "pending").execute()
+        if not res.data:
+            continue  # the recruiter decided meanwhile
+        expired += 1
+        profile = await first(db.table("profiles").select("full_name, email").eq("user_id", r["candidate_id"]))
+        if profile and profile.get("email") and r.get("posting"):
+            await send_proof_decision(profile["email"], profile.get("full_name") or "", r["posting"], "declined", feedback)
+    return expired
+
+
+async def _abandon_stale_proofs() -> None:
+    db = await get_db()
+    cutoff = (datetime.now(timezone.utc) - timedelta(seconds=EXPIRES_AFTER_S)).isoformat()
+    await db.table("skill_proofs").update({"status": "abandoned"}).eq("status", "in_progress").lt("created_at", cutoff).execute()
+
+
 async def run_daily_sync(time_budget_s: int = 25 * 60) -> dict[str, Any]:
     started = time.monotonic()
+    stats: dict[str, Any] = {"decisions_expired": 0}
+    # Before matching, which can stop early on the time budget: the response guarantee must
+    # run every day.
+    try:
+        stats["decisions_expired"] = await _expire_decisions()
+        await _abandon_stale_proofs()
+    except Exception:
+        log.exception("Proof deadlines failed")
+
     pool = await _refresh_pool()
     users = await _background_users()
 
-    stats = {"users": len(users), "matched_users": 0, "emails_sent": 0, "followups_sent": 0, "errors": 0}
+    stats.update({"users": len(users), "matched_users": 0, "emails_sent": 0, "followups_sent": 0, "errors": 0})
     for user in users:
         if time.monotonic() - started > time_budget_s:
             break

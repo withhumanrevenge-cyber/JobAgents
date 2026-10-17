@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.errors import install_error_handlers
 from app.observability import init_sentry
-from app.routers import admin, ai_settings, applications, billing, hire, jobs, misc, resume
+from app.routers import admin, ai_settings, applications, billing, hire, jobs, misc, proofs, resume
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -47,5 +47,5 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-for module in (jobs, applications, resume, billing, hire, admin, ai_settings, misc):
+for module in (jobs, applications, resume, billing, hire, proofs, admin, ai_settings, misc):
     app.include_router(module.router)

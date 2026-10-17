@@ -1,5 +1,5 @@
 -- Base schema. Run this first, then every file in supabase/migrations/ in numeric order
--- (002 → 011). Every statement is idempotent, so the whole sequence is safe to run against
+-- (002 → 012). Every statement is idempotent, so the whole sequence is safe to run against
 -- both a fresh project and the live database.
 
 -- PROFILES (one per user)
