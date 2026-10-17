@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Loader2, Users, Coins, DollarSign, Activity, Plus } from "lucide-react"
 import { PLAN_LABEL } from "@/lib/plans"
 import type { Plan } from "@/types"
+import { apiFetch } from "@/lib/api"
 
 interface Overview {
   totalUsers: number
@@ -46,20 +47,20 @@ export default function AdminDashboard() {
   const load = useCallback(async () => {
     setLoading(true)
     const [o, u] = await Promise.all([
-      fetch("/api/admin/overview").then((r) => r.json()),
-      fetch("/api/admin/users").then((r) => r.json()),
+      apiFetch("/api/admin/overview").then((r) => r.json()),
+      apiFetch("/api/admin/users").then((r) => r.json()),
     ])
     if (!o.error) setOverview(o)
     if (!u.error) setUsers(u.users)
     setLoading(false)
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { void Promise.resolve().then(load) }, [load])
 
   const setPlan = async (user_id: string, plan: Plan) => {
     setSavingId(user_id)
     try {
-      const res = await fetch("/api/admin/set-plan", {
+      const res = await apiFetch("/api/admin/set-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id, plan }),
@@ -74,7 +75,7 @@ export default function AdminDashboard() {
     if (!Number.isFinite(amount) || amount <= 0) return
     setSavingId(user_id)
     try {
-      const res = await fetch("/api/admin/grant-credits", {
+      const res = await apiFetch("/api/admin/grant-credits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id, amount }),

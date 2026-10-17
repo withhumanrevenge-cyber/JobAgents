@@ -1,3 +1,5 @@
+import { apiFetch } from "@/lib/api"
+
 type Provider = "razorpay" | "lemonsqueezy"
 type PaidPlan = "pro" | "premium"
 
@@ -14,7 +16,7 @@ function loadRazorpay(): Promise<void> {
 
 export async function startCheckout(provider: Provider, plan: PaidPlan): Promise<void> {
   if (provider === "lemonsqueezy") {
-    const res = await fetch("/api/billing/lemonsqueezy/checkout", {
+    const res = await apiFetch("/api/billing/lemonsqueezy/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan }),
@@ -25,7 +27,7 @@ export async function startCheckout(provider: Provider, plan: PaidPlan): Promise
     return
   }
 
-  const res = await fetch("/api/billing/razorpay/checkout", {
+  const res = await apiFetch("/api/billing/razorpay/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ plan }),

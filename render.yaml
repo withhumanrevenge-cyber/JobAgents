@@ -1,0 +1,79 @@
+# Render Blueprint for the Python backend. Render → New → Blueprint → pick this repo.
+# Secrets are `sync: false`: Render asks for their values when the Blueprint is created.
+
+envVarGroups:
+  - name: jobagent-backend
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: APP_URL
+        value: https://getjobagents.xyz
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      # Fernet key; see backend/.env.example for how to generate it. Keep a copy somewhere safe.
+      - key: BYOK_ENCRYPTION_KEY
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: RAZORPAY_PRO_PLAN_ID
+        sync: false
+      - key: RAZORPAY_PREMIUM_PLAN_ID
+        sync: false
+      - key: LEMONSQUEEZY_API_KEY
+        sync: false
+      - key: LEMONSQUEEZY_STORE_ID
+        sync: false
+      - key: LEMONSQUEEZY_PRO_VARIANT_ID
+        sync: false
+      - key: LEMONSQUEEZY_PREMIUM_VARIANT_ID
+        sync: false
+      - key: LEMONSQUEEZY_WEBHOOK_SECRET
+        sync: false
+
+services:
+  - type: web
+    name: jobagent-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    # Starter stays awake. The free plan sleeps when idle, so the first request after a pause
+    # (including payment webhooks) waits ~1 min for a cold start.
+    plan: starter
+    envVars:
+      - fromGroup: jobagent-backend
+
+  # Daily job sync, scoring and digest emails. Runs the job directly in its own container, so
+  # it has no HTTP timeout and doesn't load the web service.
+  - type: cron
+    name: jobagent-daily-sync
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python -m app.jobs.daily_sync
+    schedule: "0 6 * * *"
+    plan: starter
+    envVars:
+      - fromGroup: jobagent-backend

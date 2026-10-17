@@ -12,7 +12,10 @@ export async function GET(request: Request) {
     | "invite"
     | "magiclink"
     | null
-  const next = requestUrl.searchParams.get("next") ?? "/dashboard"
+  // Only same-site paths: "//evil.com" or "/\evil.com" would send the freshly signed-in user
+  // to another site.
+  const rawNext = requestUrl.searchParams.get("next") ?? ""
+  const next = /^\/(?![/\\])/.test(rawNext) ? rawNext : "/dashboard"
 
   const supabase = await createClient()
 
@@ -22,9 +25,9 @@ export async function GET(request: Request) {
     if (!error && data.user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, onboarded")
         .eq("user_id", data.user.id)
-        .single()
+        .maybeSingle()
 
       if (!profile) {
         const fullName = data.user.user_metadata?.full_name || data.user.user_metadata?.name || ""
@@ -39,6 +42,9 @@ export async function GET(request: Request) {
           onboarded: false,
         })
 
+        return NextResponse.redirect(new URL("/onboarding", requestUrl.origin))
+      }
+      if (!profile.onboarded) {
         return NextResponse.redirect(new URL("/onboarding", requestUrl.origin))
       }
     }

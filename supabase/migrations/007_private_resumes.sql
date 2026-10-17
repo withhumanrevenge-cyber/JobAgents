@@ -8,4 +8,7 @@
 -- The owner-scoped policies from 005_storage_security.sql still apply. The API mints signed
 -- URLs with the service role, so it is unaffected by them.
 
-update storage.buckets set public = false where id = 'resumes';
+-- Creates the bucket on a fresh project (nothing else does), and flips it private if it exists.
+insert into storage.buckets (id, name, public)
+values ('resumes', 'resumes', false)
+on conflict (id) do update set public = false;

@@ -14,6 +14,10 @@ drop policy if exists "Allow authenticated uploads" on storage.objects;
 drop policy if exists "Allow authenticated updates" on storage.objects;
 drop policy if exists "resumes_auth_insert" on storage.objects;
 drop policy if exists "resumes_auth_update" on storage.objects;
+drop policy if exists "resumes_own_read" on storage.objects;
+drop policy if exists "resumes_own_insert" on storage.objects;
+drop policy if exists "resumes_own_update" on storage.objects;
+drop policy if exists "resumes_own_delete" on storage.objects;
 
 create policy "resumes_own_read" on storage.objects for select to authenticated
   using (bucket_id = 'resumes' and (storage.foldername(name))[1] = auth.uid()::text);

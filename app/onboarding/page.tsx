@@ -90,12 +90,7 @@ export default function OnboardingPage() {
       }, { onConflict: "user_id" })
       if (upsertError) throw upsertError
 
-      if (parsedResume) {
-        fetch("/api/jobs/fetch", { method: "POST" })
-          .then(() => fetch("/api/match", { method: "POST" }))
-          .catch(() => {})
-      }
-
+      // The dashboard runs the first search itself, with progress (just_onboarded=1).
       router.push("/dashboard?just_onboarded=1")
     } catch (err: unknown) {
       const msg =
@@ -350,7 +345,7 @@ export default function OnboardingPage() {
                   <FileText className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-xs font-medium text-green-700">{parsedResume.target_role}</p>
-                    <p className="text-[10px] text-green-600 mt-0.5">{parsedResume.skills.length} skills · {parsedResume.years_experience}y experience</p>
+                    <p className="text-[10px] text-green-600 mt-0.5">{parsedResume.skills?.length ?? 0} skills · {parsedResume.years_experience}y experience</p>
                   </div>
                 </div>
               )}

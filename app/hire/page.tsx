@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Loader2, Plus, Users, Briefcase, ArrowRight } from "lucide-react"
 import { JOB_TYPE_LABEL } from "@/lib/status"
 import type { JobPosting, JobType } from "@/types"
+import { apiFetch } from "@/lib/api"
 
 type PostingRow = JobPosting & { candidate_count: number }
 
@@ -13,7 +14,7 @@ export default function HireDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch("/api/hire/postings")
+    apiFetch("/api/hire/postings")
       .then((r) => r.json())
       .then((d) => { if (!d.error) setPostings(d.postings) })
       .finally(() => setLoading(false))

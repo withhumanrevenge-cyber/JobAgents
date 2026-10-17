@@ -6,9 +6,12 @@ import { Loader2, Check, CreditCard, Zap } from "lucide-react"
 import { startCheckout } from "@/lib/billing/client"
 import { PLAN_CONFIG, ACTION_LABEL } from "@/lib/plans"
 import type { Plan, UsageAction } from "@/types"
+import { apiFetch } from "@/lib/api"
 
 interface UsageData {
   plan: Plan
+  // byok: the user's own AI key (no credits spent). hosted / trial: JobAgent's AI on credits.
+  ai_mode: "byok" | "hosted" | "trial"
   credits: { allotment: number; used: number; remaining: number }
   costs: Record<UsageAction, number>
   maxVisibleMatches: number
@@ -31,7 +34,8 @@ export function BillingPanel() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("/api/usage/me").then((r) => r.json()).then((d) => {
+    const currency = document.cookie.match(/(?:^|; )ja_currency=(INR|USD)/)?.[1] ?? "USD"
+    apiFetch(`/api/usage/me?currency=${currency}`).then((r) => r.json()).then((d) => {
       if (!d.error) setData(d)
     }).finally(() => setLoading(false))
   }, [])
@@ -65,13 +69,21 @@ export function BillingPanel() {
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">Plan & credits</p>
+        <p className="text-sm font-medium text-foreground">Plan</p>
         <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${PLAN_TONE[data.plan]}`}>{data.plan}</span>
       </div>
 
+      {data.ai_mode === "byok" && (
+        <p className="text-xs text-foreground/90 bg-muted border border-border rounded-md px-3 py-2">
+          AI runs on your own key, so Smart Apply, tailoring and interview prep use no credits.
+          {data.plan !== "free" && " Your hosted credits below stay available if you switch back."}
+        </p>
+      )}
+
+      {(data.ai_mode !== "byok" || data.plan !== "free") && (
       <div>
         <div className="flex justify-between text-[11px] mb-1">
-          <span className="text-muted-foreground">Credits this month</span>
+          <span className="text-muted-foreground">{data.ai_mode === "trial" ? "Free trial credits this month" : "Hosted AI credits this month"}</span>
           <span className={low ? "text-red-600 font-medium" : "text-muted-foreground"}>{remaining} / {allotment} left</span>
         </div>
         <div className="h-1.5 bg-accent rounded-full overflow-hidden">
@@ -81,20 +93,21 @@ export function BillingPanel() {
           {(Object.keys(data.costs) as UsageAction[]).map((a) => `${ACTION_LABEL[a]} ${data.costs[a]}`).join(" · ")} credits · matching is free
         </p>
       </div>
+      )}
 
       {upgrades.length === 0 ? (
         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center gap-1.5">
-          <Check className="w-3.5 h-3.5" /> You&apos;re on the top tier — {allotment} credits/month.
+          <Check className="w-3.5 h-3.5" /> You&apos;re on the top tier: {allotment} hosted AI credits a month.
         </p>
       ) : (
         <div className="space-y-3 pt-1">
-          <p className="text-xs font-medium text-foreground/90">Upgrade for more credits & jobs</p>
+          <p className="text-xs font-medium text-foreground/90">Upgrade for hosted AI: no key needed</p>
           {upgrades.map((p) => (
             <PlanOption
               key={p}
               title={PLAN_CONFIG[p].label}
               price={`${data.prices[p]}/mo`}
-              detail={`${PLAN_CONFIG[p].credits} credits · ${PLAN_CONFIG[p].maxVisibleMatches.toLocaleString()} job matches`}
+              detail={`${PLAN_CONFIG[p].credits} hosted AI credits a month · daily matching and email digests without a key · ${PLAN_CONFIG[p].maxVisibleMatches.toLocaleString()} matches in your feed`}
               busy={busy}
               processors={data.processors}
               onIntl={() => pay("lemonsqueezy", p)}

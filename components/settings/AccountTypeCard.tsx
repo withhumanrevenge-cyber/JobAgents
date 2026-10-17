@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Building2, Briefcase } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
 export function AccountTypeCard() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export function AccountTypeCard() {
     if (!companyName.trim()) { setError("Company name is required."); return }
     setSwitching(true); setError(null)
     try {
-      const res = await fetch("/api/hire/activate", {
+      const res = await apiFetch("/api/hire/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company_name: companyName.trim() }),

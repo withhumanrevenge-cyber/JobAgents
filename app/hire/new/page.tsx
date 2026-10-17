@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Loader2, ArrowLeft } from "lucide-react"
 import { TagInput } from "@/components/ui/TagInput"
 import type { JobType, ExperienceLevel } from "@/types"
+import { apiFetch } from "@/lib/api"
 
 export default function NewPostingPage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function NewPostingPage() {
   const handleSubmit = async () => {
     setSaving(true); setError(null)
     try {
-      const res = await fetch("/api/hire/postings", {
+      const res = await apiFetch("/api/hire/postings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

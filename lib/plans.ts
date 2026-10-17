@@ -1,37 +1,32 @@
 import { Plan, UsageAction } from "@/types"
+// Shared with the Python backend, which enforces these limits. One file, so the UI can't drift.
+import plans from "@/backend/app/plans.json"
 
 export interface PlanConfig {
+  // Hosted-AI credits a month. With their own AI key, users spend none.
   credits: number
   matchPerRun: number
+  // Free users without a key: jobs scored per search and per day on our AI.
+  trialMatchPerRun: number
+  trialMatchPerDay: number
   maxVisibleMatches: number
   allSources: boolean
   allCountries: boolean
   label: string
   priceUsd: number
+  priceInrPaise: number
 }
 
-export const PLAN_CONFIG: Record<Plan, PlanConfig> = {
-  free:    { credits: 15,  matchPerRun: 50,  maxVisibleMatches: 25,   allSources: false, allCountries: false, label: "Free",    priceUsd: 0 },
-  pro:     { credits: 100, matchPerRun: 150, maxVisibleMatches: 150,  allSources: true,  allCountries: true,  label: "Pro",     priceUsd: 12 },
-  premium: { credits: 300, matchPerRun: 300, maxVisibleMatches: 2000, allSources: true,  allCountries: true,  label: "Premium", priceUsd: 24 },
-}
+export const PLAN_CONFIG: Record<Plan, PlanConfig> = plans.plans
 
-export const CREDIT_COST: Record<UsageAction, number> = {
-  smart_apply: 3,
-  tailor: 2,
-  interview: 2,
-}
+export const CREDIT_COST: Record<UsageAction, number> = plans.creditCost
 
-export const ACTION_LABEL: Record<UsageAction, string> = {
-  smart_apply: "Smart Apply",
-  tailor: "Resume tailor",
-  interview: "Interview prep",
-}
+export const ACTION_LABEL: Record<UsageAction, string> = plans.actionLabel
 
 export const PLAN_LABEL: Record<Plan, string> = {
-  free: "Free",
-  pro: "Pro",
-  premium: "Premium",
+  free: PLAN_CONFIG.free.label,
+  pro: PLAN_CONFIG.pro.label,
+  premium: PLAN_CONFIG.premium.label,
 }
 
 export function effectivePlan(profile: { plan?: string | null; plan_expires_at?: string | null }): Plan {

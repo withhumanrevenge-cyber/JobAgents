@@ -1,14 +1,26 @@
-# backend/app/agents/job_fetcher.py
-import logging
-from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
-from tenacity import retry, stop_after_attempt, wait_exponential
-import httpx
-from app.services.supabase_service import supabase_service
-from app.agents.ats_scraper import fetch_ats_jobs
-from app.core.config import settings
+"""Pulls jobs from Adzuna and the ATS boards into the shared `jobs` pool."""
 
-logger = logging.getLogger(__name__)
+import asyncio
+import logging
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Any
+from urllib.parse import urlencode
+
+import httpx
+
+from app.agents.ats_scraper import fetch_ats_jobs
+from app.agents.text import detect_experience_level, detect_job_type, strip_html
+from app.config import get_settings
+from app.countries import (
+    ADZUNA_SUPPORTED,
+    COUNTRY_CURRENCY,
+    COUNTRY_NAME,
+    DEFAULT_COUNTRY,
+)
+from app.db import get_db
+
+log = logging.getLogger(__name__)
 
 DEFAULT_QUERIES = [
     "software engineer",
@@ -21,258 +33,159 @@ DEFAULT_QUERIES = [
     "ui ux designer",
 ]
 
-DEFAULT_COUNTRY = "US"
 RECENT_DAYS = 180
-ADZUNA_SUPPORTED = {
-    "US", "GB", "CA", "AU", "DE", "FR", "IN", "NL", "SG", "IE", "ES", "IT", "BR", "MX", "ZA", "PL", "NZ", "CH", "AT", "BE"
+_ats_fetched_at = float("-inf")
+UPSERT_CHUNK = 500
+
+_SYMBOL = {
+    "USD": "$", "INR": "₹", "GBP": "£", "EUR": "€", "CAD": "CA$", "AUD": "A$", "SGD": "S$",
+    "BRL": "R$", "MXN": "MX$", "NZD": "NZ$", "PLN": "zł", "ZAR": "R", "CHF": "CHF ",
 }
 
-COUNTRY_NAME = {
-    "US": "United States", "GB": "United Kingdom", "CA": "Canada", "DE": "Germany",
-    "FR": "France", "IN": "India", "AU": "Australia", "NL": "Netherlands",
-    "SG": "Singapore", "IE": "Ireland", "ES": "Spain", "IT": "Italy",
-    "BR": "Brazil", "MX": "Mexico", "ZA": "South Africa", "PL": "Poland",
-    "NZ": "New Zealand", "CH": "Switzerland", "AT": "Austria", "BE": "Belgium",
-}
 
-US_STATES = {
-    "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
-    "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
-    "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
-    "VA","WA","WV","WI","WY","DC",
-}
-
-INDIA_CITIES = ["bangalore","bengaluru","hyderabad","chennai","mumbai","pune","gurgaon","gurugram","noida","delhi","new delhi","kolkata","ahmedabad","kochi","cochin","jaipur","chandigarh","indore","trivandrum","thiruvananthapuram"]
-UK_HINTS = ["london","manchester","edinburgh","birmingham","bristol","leeds","glasgow"]
-CANADA_HINTS = ["toronto","vancouver","montreal","ottawa","calgary","edmonton"]
-DE_HINTS = ["berlin","munich","münchen","hamburg","frankfurt","cologne","köln"]
-AU_HINTS = ["sydney","melbourne","brisbane","perth","adelaide"]
+def format_salary(lo: float | None, hi: float | None, country: str) -> str | None:
+    """Adzuna reports salaries in the searched country's currency, not always dollars."""
+    symbol = _SYMBOL.get(COUNTRY_CURRENCY.get(country, "USD"), "$")
+    fmt = lambda v: f"{symbol}{round(v / 1000)}k"  # noqa: E731
+    if lo and hi and round(lo / 1000) != round(hi / 1000):
+        return f"{fmt(lo)} - {fmt(hi)}"
+    if lo or hi:
+        return fmt(lo or hi)  # type: ignore[arg-type]
+    return None
 
 
-def detect_country(loc: str) -> str:
-    if not loc:
-        return "Unknown"
-    l = loc.lower()
-    if l.includes("india"): return "India"
-    if any(c in l for c in INDIA_CITIES): return "India"
-    if any(x in l for x in ["united states", "u.s.", "usa"]): return "United States"
-    if any(x in l for x in ["united kingdom", " uk", ", uk"]): return "United Kingdom"
-    if any(c in l for c in UK_HINTS): return "United Kingdom"
-    if "canada" in l or any(c in l for c in CANADA_HINTS): return "Canada"
-    if "germany" in l or any(c in l for c in DE_HINTS): return "Germany"
-    if "france" in l or "paris" in l: return "France"
-    if "australia" in l or any(c in l for c in AU_HINTS): return "Australia"
-    if "singapore" in l: return "Singapore"
-    if "ireland" in l or "dublin" in l: return "Ireland"
-    if "netherlands" in l or "amsterdam" in l: return "Netherlands"
-    if "brazil" in l or "são paulo" in l or "sao paulo" in l: return "Brazil"
-    if "mexico" in l: return "Mexico"
-    if "japan" in l or "tokyo" in l: return "Japan"
-    if any(x in l for x in ["worldwide", "anywhere", "global", "remote"]): return "Worldwide"
-    if "europe" in l or "emea" in l: return "Europe"
-    
-    parts = [p.strip() for p in loc.split(",")]
-    tail = parts[-1] if parts else ""
-    if tail and tail.upper() in US_STATES:
-        return "United States"
-    
-    return "Unknown"
-
-
-def detect_job_type(location: str, description: str, remote_flag: bool = False) -> str:
-    h = f"{location or ''} {(description or '')[:500]}".lower()
-    if "hybrid" in h: return "hybrid"
-    if remote_flag or any(x in h for x in ["remote", "worldwide", "anywhere", "work from home"]): return "remote"
-    if any(x in h for x in ["on-site", "onsite", "in-office", "in office"]): return "onsite"
-    return "remote" if remote_flag else "unknown"
-
-
-def detect_experience_level(title: str) -> str:
-    t = (title or "").lower()
-    if any(x in t for x in ["staff", "principal", "architect", "distinguished", "director", "vp", "head of", "tech lead", "engineering manager", "founding"]): return "lead"
-    if any(x in t for x in ["senior", "sr."]): return "senior"
-    if any(x in t for x in ["junior", "jr.", "entry", "intern", "associate", "graduate", "new grad"]): return "entry"
-    if "engineer i" in t: return "entry"
-    if "engineer iii" in t or "engineer iv" in t: return "senior"
-    return "mid"
-
-
-def is_recent(job: Dict[str, Any]) -> bool:
-    posted = job.get("posted_date")
-    if not posted:
-        return True
+def _is_recent(job: dict[str, Any]) -> bool:
     try:
-        from datetime import datetime, timezone
-        posted_dt = datetime.fromisoformat(posted.replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
-        return (now - posted_dt).days <= RECENT_DAYS
-    except:
+        posted = datetime.fromisoformat(job["posted_date"])
+    except (KeyError, TypeError, ValueError):
         return True
+    return datetime.now(timezone.utc) - posted <= timedelta(days=RECENT_DAYS)
 
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
-async def fetch_adzuna_jobs(
-    query: str = "software engineer",
-    country_code: str = DEFAULT_COUNTRY,
-    page_count: int = 5
-) -> List[Dict[str, Any]]:
-    app_id = settings.ADZUNA_APP_ID
-    app_key = settings.ADZUNA_APP_KEY
+def parse_adzuna(results: list[dict[str, Any]], country: str) -> list[dict[str, Any]]:
+    jobs = []
+    for j in results:
+        title = j.get("title") or "Untitled role"
+        description = strip_html(j.get("description"))
+        location = (j.get("location") or {}).get("display_name") or None
+        area = (j.get("location") or {}).get("area") or []
+        job_type = detect_job_type(location, description)
+        created = j.get("created")
+        try:
+            posted = datetime.fromisoformat(created.replace("Z", "+00:00")).isoformat() if created else None
+        except ValueError:
+            posted = None
+        jobs.append({
+            "title": strip_html(title),
+            "company": (j.get("company") or {}).get("display_name") or "Unknown Company",
+            "location": location,
+            "country": COUNTRY_NAME.get(country) or (area[0] if area else "Unknown"),
+            "region": area[1] if len(area) > 1 else None,
+            "remote": job_type == "remote",
+            "job_type": job_type,
+            "experience_level": detect_experience_level(title),
+            "url": j.get("redirect_url") or "https://adzuna.com",
+            "description": description,
+            "salary_range": format_salary(j.get("salary_min"), j.get("salary_max"), country),
+            "tags": [c for c in [(j.get("category") or {}).get("label")] if c],
+            "posted_date": posted or datetime.now(timezone.utc).isoformat(),
+            "source": "adzuna",
+            "source_id": str(j.get("id")),
+        })
+    return jobs
 
-    if not app_id or not app_key or "your-" in app_id or "your-" in app_key:
-        logger.warning("Adzuna API credentials missing. Skipping Adzuna fetch.")
+
+async def _adzuna_page(client: httpx.AsyncClient, url: str) -> list[dict[str, Any]]:
+    delay = 1.0
+    for attempt in range(3):
+        try:
+            res = await client.get(url)
+            if res.status_code == 200:
+                return res.json().get("results") or []
+            # 4xx other than 429 won't succeed on retry (bad key, unsupported country).
+            if res.status_code < 500 and res.status_code != 429:
+                log.warning("Adzuna returned %s", res.status_code)
+                return []
+        except (httpx.HTTPError, ValueError) as e:
+            log.warning("Adzuna request failed: %s", e)
+        if attempt < 2:
+            await asyncio.sleep(delay)
+            delay *= 2
+    return []
+
+
+async def fetch_adzuna_jobs(query: str | None, country: str, pages: int = 5) -> list[dict[str, Any]]:
+    s = get_settings()
+    if not s.ADZUNA_APP_ID or not s.ADZUNA_APP_KEY:
+        log.warning("Adzuna credentials missing; skipping Adzuna.")
         return []
-
-    cc = country_code.upper()
+    cc = country.upper()
     if cc not in ADZUNA_SUPPORTED:
-        logger.warning(f"Adzuna doesn't support country '{cc}'. Skipping.")
         return []
 
-    try:
-        encoded_query = httpx.URL(query).params  # This will encode properly
-        import urllib.parse
-        encoded_query = urllib.parse.quote(query)
-        
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            pages = range(1, min(max(1, page_count), 5) + 1)
-            tasks = []
-            for page in pages:
-                url = f"https://api.adzuna.com/v1/api/jobs/{cc.lower()}/search/{page}?app_id={app_id}&app_key={app_key}&title_only={encoded_query}&results_per_page=50"
-                tasks.append(client.get(url))
-            
-            responses = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            results = []
-            for resp in responses:
-                if isinstance(resp, Exception):
-                    logger.warning(f"Adzuna request failed: {resp}")
-                    continue
-                if resp.status_code != 200:
-                    logger.warning(f"Adzuna HTTP {resp.status_code}")
-                    continue
-                try:
-                    data = resp.json()
-                    results.extend(data.get("results", []))
-                except Exception as e:
-                    logger.warning(f"Adzuna JSON parse failed: {e}")
-            
-            return [transform_adzuna_job(job, cc) for job in results]
-    
-    except Exception as e:
-        logger.error(f"Failed to fetch from Adzuna: {e}")
-        return []
-
-
-def transform_adzuna_job(job: Dict[str, Any], cc: str) -> Dict[str, Any]:
-    tags = []
-    if job.get("category", {}).get("label"):
-        tags.append(job["category"]["label"])
-
-    salary_min = job.get("salary_min")
-    salary_max = job.get("salary_max")
-    salary = None
-    if salary_min and salary_max:
-        salary = f"${salary_min//1000}k - ${salary_max//1000}k"
-    elif salary_min:
-        salary = f"${salary_min//1000}k"
-
-    loc = job.get("location", {}).get("display_name", "")
-    job_type = detect_job_type(loc, job.get("description", "") or "")
-    area = job.get("location", {}).get("area", [])
-    country = COUNTRY_NAME.get(cc, area[0] if area else "Unknown")
-    region = area[1] if len(area) > 1 else None
-    title = job.get("title") or "Untitled role"
-
-    return {
-        "title": title,
-        "company": job.get("company", {}).get("display_name", "Unknown Company"),
-        "location": loc or None,
-        "country": country,
-        "region": region,
-        "remote": job_type == "remote",
-        "job_type": job_type,
-        "experience_level": detect_experience_level(title),
-        "url": job.get("redirect_url", "https://adzuna.com"),
-        "description": job.get("description", "") or "",
-        "salary_range": salary,
-        "tags": tags,
-        "posted_date": job.get("created") or datetime.utcnow().isoformat(),
-        "source": "adzuna",
-        "source_id": str(job.get("id", "")),
-    }
+    params = urlencode({
+        "app_id": s.ADZUNA_APP_ID,
+        "app_key": s.ADZUNA_APP_KEY,
+        "title_only": query or "software engineer",
+        "results_per_page": 50,
+    })
+    pages = max(1, min(pages, 5))
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        results = await asyncio.gather(*(
+            _adzuna_page(client, f"https://api.adzuna.com/v1/api/jobs/{cc.lower()}/search/{p}?{params}")
+            for p in range(1, pages + 1)
+        ))
+    return parse_adzuna([r for page in results for r in page], cc)
 
 
 async def sync_all_jobs(
-    queries: Optional[List[str] | str] = None,
-    countries: Optional[List[str] | str] = None,
-    sources: Optional[List[str]] = None,
-    adzuna_pages: int = 5
-) -> Dict[str, int]:
-    """Main entry point for job synchronization"""
-    sources = sources or ["adzuna", "greenhouse", "lever", "ashby"]
-    use_adzuna = "adzuna" in sources
-    use_ats = any(s in sources for s in ["greenhouse", "lever", "ashby"])
+    queries: list[str] | None,
+    countries: list[str] | None,
+    *,
+    sources: list[str],
+    adzuna_pages: int = 5,
+    ats_max_age_s: float | None = None,
+) -> dict[str, int]:
+    """ats_max_age_s: skip the company boards if this process fetched them more recently than
+    this. The boards are the same for every user, so one user's "Find jobs" shouldn't re-pull
+    50+ boards that another user's click refreshed minutes ago."""
+    role_queries: list[str | None] = list(queries) if queries else [None]
+    country_codes = [c.upper() for c in countries] if countries else [DEFAULT_COUNTRY]
 
-    # Normalize queries
-    if isinstance(queries, str):
-        role_queries = [queries] if queries else [None]
-    elif isinstance(queries, list):
-        role_queries = queries if queries else [None]
-    else:
-        role_queries = [None]
+    tasks = []
+    if "adzuna" in sources:
+        tasks += [fetch_adzuna_jobs(q, c, adzuna_pages) for q in role_queries for c in country_codes]
+    # ATS boards are company lists, not searches: fetch once regardless of queries/countries.
+    ats_sources = [s for s in sources if s != "adzuna"]
+    global _ats_fetched_at
+    fresh = ats_max_age_s is not None and time.monotonic() - _ats_fetched_at < ats_max_age_s
+    if ats_sources and not fresh:
+        _ats_fetched_at = time.monotonic()
+        tasks.append(fetch_ats_jobs(ats_sources))
 
-    # Normalize countries
-    if isinstance(countries, str):
-        country_codes = [countries] if countries else [DEFAULT_COUNTRY]
-    elif isinstance(countries, list):
-        country_codes = countries if countries else [DEFAULT_COUNTRY]
-    else:
-        country_codes = [DEFAULT_COUNTRY]
+    batches = await asyncio.gather(*tasks)
+    fetched = [job for batch in batches for job in batch]
 
-    fetched_jobs = []
+    seen: set[str] = set()
+    unique = []
+    for job in fetched:
+        key = f"{job['source']}:{job['source_id']}"
+        if key not in seen and _is_recent(job):
+            seen.add(key)
+            unique.append(job)
 
-    # Fetch from Adzuna
-    if use_adzuna:
-        adzuna_tasks = []
-        for q in role_queries:
-            for c in country_codes:
-                adzuna_tasks.append(fetch_adzuna_jobs(q or "software engineer", c, adzuna_pages))
-        
-        import asyncio
-        adzuna_results = await asyncio.gather(*adzuna_tasks, return_exceptions=True)
-        for r in adzuna_results:
-            if isinstance(r, list):
-                fetched_jobs.extend(r)
-            elif isinstance(r, Exception):
-                logger.warning(f"Adzuna fetch error: {r}")
+    if not unique:
+        return {"fetched": len(fetched), "new": 0, "duplicates": 0}
 
-    # Fetch from ATS
-    if use_ats:
-        ats_results = await fetch_ats_jobs()
-        # Filter by requested sources
-        ats_filtered = [j for j in ats_results if j.get("source") in sources]
-        fetched_jobs.extend(ats_filtered)
-
-    # Deduplicate and filter recent
-    seen = set()
-    unique_jobs = []
-    for job in fetched_jobs:
-        if not is_recent(job):
-            continue
-        key = f"{job.get('source')}:{job.get('source_id')}"
-        if key in seen:
-            continue
-        seen.add(key)
-        unique_jobs.append(job)
-
-    if not unique_jobs:
-        return {"fetched": len(fetched_jobs), "new": 0, "duplicates": 0}
-
-    # Bulk upsert
-    stats = await supabase_service.upsert_jobs(unique_jobs)
-    return stats
-
-
-# Import at bottom to avoid circular imports
-import asyncio
-from datetime import datetime
+    db = await get_db()
+    new = 0
+    for i in range(0, len(unique), UPSERT_CHUNK):
+        chunk = unique[i : i + UPSERT_CHUNK]
+        try:
+            res = await db.table("jobs").upsert(
+                chunk, on_conflict="source,source_id", ignore_duplicates=True
+            ).execute()
+            new += len(res.data or [])
+        except Exception:
+            log.exception("job upsert failed")
+    return {"fetched": len(fetched), "new": new, "duplicates": len(unique) - new}

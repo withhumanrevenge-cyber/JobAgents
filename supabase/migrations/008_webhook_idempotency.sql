@@ -11,7 +11,7 @@ create table if not exists webhook_events (
   unique(provider, event_id)
 );
 
-create index if not exists idx_webhook_events_provider on webhook_events(provider);
+-- No separate provider index: unique(provider, event_id) already covers lookups by provider.
 
 alter table webhook_events enable row level security;
 

@@ -2,13 +2,16 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development"
 
+// The Python backend the browser calls directly (lib/api.ts).
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).origin : ""
+
 const csp = `
   default-src 'self';
   script-src 'self' ${isDev ? "'unsafe-eval' 'unsafe-inline'" : ""} https://checkout.razorpay.com https://js.stripe.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com data:;
   img-src 'self' data: https: blob:;
-  connect-src 'self' https://*.supabase.co https://api.groq.com https://api.adzuna.com https://boards-api.greenhouse.io https://api.lever.co https://api.ashbyhq.com https://api.resend.com https://api.razorpay.com https://api.lemonsqueezy.com ${isDev ? "ws://localhost:*" : ""};
+  connect-src 'self' ${apiOrigin} https://*.supabase.co wss://*.supabase.co https://api.razorpay.com https://lumberjack.razorpay.com ${isDev ? "ws://localhost:* http://localhost:*" : ""};
   frame-src 'self' https://checkout.razorpay.com https://js.stripe.com;
   frame-ancestors 'none';
   base-uri 'self';
