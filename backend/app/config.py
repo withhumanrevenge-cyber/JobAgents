@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     LEMONSQUEEZY_PREMIUM_VARIANT_ID: str = ""
     LEMONSQUEEZY_WEBHOOK_SECRET: str = ""
 
+    # Error reporting (app/observability.py). Empty disables it.
+    SENTRY_DSN: str = ""
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def _split_origins(cls, v: object) -> object:

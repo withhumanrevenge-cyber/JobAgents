@@ -51,6 +51,8 @@ envVarGroups:
         sync: false
       - key: LEMONSQUEEZY_WEBHOOK_SECRET
         sync: false
+      - key: SENTRY_DSN
+        sync: false
 
 services:
   - type: web
