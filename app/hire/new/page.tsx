@@ -21,6 +21,7 @@ export default function NewPostingPage() {
   const [salary, setSalary] = useState("")
   const [skills, setSkills] = useState<string[]>([])
   const [description, setDescription] = useState("")
+  const [slaDays, setSlaDays] = useState(7)
 
   const inputCls = "w-full border border-border rounded-md py-2.5 px-3 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:border-foreground focus:outline-none transition-colors"
   const labelCls = "block text-xs text-muted-foreground mb-1.5"
@@ -41,6 +42,7 @@ export default function NewPostingPage() {
           salary_range: salary || null,
           skills,
           description,
+          response_sla_days: slaDays,
         }),
       })
       const data = await res.json()
@@ -116,6 +118,16 @@ export default function NewPostingPage() {
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={7}
             placeholder="Responsibilities, requirements, and what a great candidate looks like…"
             className={`${inputCls} resize-y leading-relaxed`} />
+        </div>
+
+        <div>
+          <label className={labelCls}>Response window</label>
+          <select value={slaDays} onChange={(e) => setSlaDays(Number(e.target.value))} className={inputCls}>
+            {[3, 5, 7, 10, 14].map((d) => <option key={d} value={d}>{d} days</option>)}
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            How long you have to advance or decline a candidate after they finish their Proof of Fit. Past it, they&apos;re declined automatically with feedback, and it counts against your response rate.
+          </p>
         </div>
       </div>
 

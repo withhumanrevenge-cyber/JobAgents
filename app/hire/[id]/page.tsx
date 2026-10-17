@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Loader2, ArrowLeft, Sparkles, Mail, ExternalLink, Users, SlidersHorizontal } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { MatchScoreBadge } from "@/components/jobs/MatchScoreBadge"
+import { CandidateProof } from "@/components/proofs/CandidateProof"
 import { JOB_TYPE_LABEL, EXPERIENCE_LABEL } from "@/lib/status"
 import type { JobPosting, CandidateMatch, CandidateStatus, JobType, ExperienceLevel } from "@/types"
 import { apiFetch } from "@/lib/api"
@@ -168,7 +169,12 @@ export default function PostingDetailPage() {
                 </div>
               </div>
 
+              <CandidateProof match={c} onChange={load} />
+
               <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/60">
+                {!c.candidate?.email && !c.candidate?.linkedin_url && (
+                  <p className="text-[11px] text-muted-foreground">Contact details are shared once you advance them and they accept.</p>
+                )}
                 {c.candidate?.email && (
                   <a href={`mailto:${c.candidate.email}`} className="inline-flex items-center gap-1.5 text-xs text-foreground/80 hover:text-foreground transition-colors">
                     <Mail className="w-3.5 h-3.5" /> {c.candidate.email}
