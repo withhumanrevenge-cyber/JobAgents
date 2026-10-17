@@ -117,3 +117,47 @@ async def send_followup(to: str, name: str, jobs: list[dict[str, Any]]) -> tuple
     text_body = (f"Hi {first_name},\n\n{lead} If any of them called you for an interview, "
                  f"mark it in your tracker.\n\n{text_items}\n\n{app_url}/applications\n")
     return await _send(to, subject, html_body, text_body)
+
+
+async def send_proof_invite(to: str, name: str, posting: dict[str, Any]) -> tuple[bool, str | None]:
+    """A recruiter invited a candidate to prove their fit for a role."""
+    app_url = get_settings().APP_URL
+    first_name = (name or "").split(" ")[0] or "there"
+    e = html.escape
+    role = f"{posting['title']} at {posting['company']}"
+    sla = posting.get("response_sla_days") or 7
+    subject = f"{posting['company']} invited you to show your fit for {posting['title']}"
+    html_body = (
+        f"<p>Hi {e(first_name)},</p><p>{e(posting['company'])} saw your profile and invited you to a short "
+        f"Proof of Fit for <strong>{e(role)}</strong>: three questions about the work itself, about 15 minutes.</p>"
+        f"<p>Once you finish, they have {sla} days to give you a decision. If they don't, you get feedback "
+        "on your answers anyway. Your contact details are shared only if they move you forward and you accept.</p>"
+        f'<p><a href="{app_url}/proofs">Start my Proof of Fit →</a></p>'
+        f'<p style="font-size:11px;color:#999">You get this because you joined the talent pool. '
+        f'<a href="{app_url}/settings">Leave it in settings.</a></p>'
+    )
+    text_body = (f"Hi {first_name},\n\n{posting['company']} invited you to a short Proof of Fit for {role}: "
+                 f"three questions, about 15 minutes. They have {sla} days to decide once you finish.\n\n"
+                 f"{app_url}/proofs\n")
+    return await _send(to, subject, html_body, text_body)
+
+
+async def send_proof_decision(to: str, name: str, posting: dict[str, Any], decision: str,
+                              feedback: str | None) -> tuple[bool, str | None]:
+    """The recruiter's decision on a finished proof (or the automatic one past the deadline)."""
+    app_url = get_settings().APP_URL
+    first_name = (name or "").split(" ")[0] or "there"
+    e = html.escape
+    role = f"{posting['title']} at {posting['company']}"
+    if decision == "advanced":
+        subject = f"{posting['company']} wants to talk to you about {posting['title']}"
+        lead = (f"Good news: {posting['company']} wants to move forward with you for {role}. "
+                "Accept the introduction to share your contact details with them.")
+    else:
+        subject = f"An update on {role}"
+        lead = f"{posting['company']} won't be moving forward with you for {role}."
+    fb = f"<p><strong>Feedback:</strong> {e(feedback)}</p>" if feedback else ""
+    html_body = (f"<p>Hi {e(first_name)},</p><p>{e(lead)}</p>{fb}"
+                 f'<p><a href="{app_url}/proofs">Open my proofs →</a></p>')
+    text_body = f"Hi {first_name},\n\n{lead}\n\n{('Feedback: ' + feedback + chr(10) + chr(10)) if feedback else ''}{app_url}/proofs\n"
+    return await _send(to, subject, html_body, text_body)

@@ -10,6 +10,8 @@ export interface PlanConfig {
   trialMatchPerRun: number
   trialMatchPerDay: number
   maxVisibleMatches: number
+  // Proof of Fit runs a month. They always run on our AI, so every candidate is graded alike.
+  proofsPerMonth: number
   allSources: boolean
   allCountries: boolean
   label: string

@@ -151,6 +151,12 @@ def _hosted(user_id: str, plan: Plan, mode: Mode) -> AIContext:
     return AIContext(user_id, plan, mode, HOSTED_PROVIDER, s.GROQ_API_KEY, s.GROQ_FAST_MODEL, s.GROQ_MODEL)
 
 
+def get_hosted_ai(user_id: str, plan: Plan) -> AIContext:
+    """Our key regardless of the user's own: for work that must be graded the same way for
+    everyone (Proof of Fit). Callers cap usage themselves; no credits are charged."""
+    return _hosted(user_id, plan, "hosted")
+
+
 async def get_ai(user_id: str, profile: dict[str, Any] | None = None) -> AIContext:
     if profile is None:
         db = await get_db()
