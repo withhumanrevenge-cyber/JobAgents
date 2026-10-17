@@ -16,7 +16,8 @@ app/
   plans.json         plan limits and prices, shared with the frontend (lib/plans.ts)
   routers/           HTTP endpoints, same paths and JSON shapes the frontend already used
   services/          credits ledger, Groq, billing webhooks, email, match rows
-  agents/            job sources (Adzuna, Greenhouse, Lever, Ashby), matching, writing, hiring
+  agents/            job sources (Adzuna, Greenhouse, Lever, Ashby), matching, writing, hiring,
+                     Proof of Fit (proof.py)
   jobs/              daily_sync (cron), backfill_descriptions (one-off)
 tests/
 ```
@@ -58,11 +59,41 @@ are fixed per provider. Keys are checked by listing the provider's models, encry
 Resume parsing never spends credits. The daily sync matches paid users and Free users with a
 key (unless they turned background matching off).
 
+## Proof of Fit
+
+A seeker answers three timed questions about a role (`app/agents/proof.py`). After each answer
+the AI writes one follow-up from what they wrote, so a pasted generic answer meets a question it
+couldn't anticipate. Grading scores each skill and keeps only evidence quotes that really appear
+in the answers; paste and over-time flags are measured by the server, not judged by the model.
+
+- Proofs always run on our Groq key, so every candidate is graded by the same model. They're
+  capped by `proofsPerMonth` in `plans.json` and cost no credits.
+- Recruiters invite candidates from a posting. Once a candidate finishes, the recruiter has the
+  posting's `response_sla_days` (default 7) to advance or decline. Past it, the daily sync
+  declines automatically with feedback from the report, and the miss lowers the recruiter's
+  on-time decision rate.
+- Contact details (email, phone, LinkedIn, and those fields inside the parsed resume) reach a
+  recruiter only after they advance the candidate and the candidate accepts.
+- Completed proofs can be shared at `/p/<slug>`: the report and quotes, never the full answers.
+
+## Hosted AI resilience
+
+- Each user's unscored jobs are ranked by overlap with their target roles and skills before any
+  AI call; jobs with no overlap at all are never scored.
+- At most `HOSTED_MAX_CONCURRENCY` calls run on our key at once (default 8).
+- Set `HOSTED_FALLBACK_PROVIDER` (e.g. `gemini`), `HOSTED_FALLBACK_API_KEY`,
+  `HOSTED_FALLBACK_FAST_MODEL` and `HOSTED_FALLBACK_MODEL` to retry hosted calls elsewhere when
+  Groq errors or rate-limits. Users' own keys never fall back to ours.
+- Set `SENTRY_DSN` to report errors (API and cron). No request bodies or IPs are sent.
+
 ## Database prerequisites
 
 Run in the Supabase SQL editor, in order, before the first deploy: `supabase/migrations/009_schema_fixes.sql`,
-`010_credits_functions.sql`, then `011_user_ai_keys.sql`. The backend calls `credits_used_this_month`
-and writes `profiles.last_matched_at` (010), and stores users' AI keys in `user_ai_keys` (011).
+`010_credits_functions.sql`, `011_user_ai_keys.sql`, `012_proof_of_fit.sql`, then `013_admin_funnel.sql`.
+The backend calls `credits_used_this_month` and writes `profiles.last_matched_at` (010), stores users'
+AI keys in `user_ai_keys` (011), Proof of Fit in `skill_proofs` and `candidate_matches` (012), and
+reads the admin funnel from `admin_funnel()` (013). 012 also makes `candidate_matches` read-only
+from the browser.
 
 ## Deploying (Render)
 

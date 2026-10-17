@@ -13,7 +13,7 @@ def test_health():
 
 def test_protected_routes_require_bearer_token():
     for method, path in [("post", "/api/match"), ("post", "/api/apply/smart"), ("get", "/api/usage/me"),
-                         ("get", "/api/admin/users"), ("post", "/api/hire/activate"),
+                         ("get", "/api/admin/users"), ("get", "/api/admin/funnel"), ("post", "/api/hire/activate"),
                          ("get", "/api/ai/settings"), ("post", "/api/ai/key"), ("delete", "/api/ai/key")]:
         res = client.request(method.upper(), path, json={} if method == "post" else None)
         assert res.status_code == 401, path
