@@ -134,15 +134,21 @@ export interface JobPosting {
   skills: string[]
   salary_range: string | null
   status: PostingStatus
+  // Days the recruiter has to decide once a candidate finishes their Proof of Fit.
+  response_sla_days: number
   created_at: string
 }
 
 export interface CandidateProfile {
   full_name: string | null
+  // Contact details arrive only after the recruiter advances and the candidate accepts.
   email: string | null
   linkedin_url: string | null
   parsed_resume: ParsedResume | null
 }
+
+export type ProofDecision = 'pending' | 'advanced' | 'declined'
+export type IntroResponse = 'accepted' | 'declined'
 
 export interface CandidateMatch {
   id: string
@@ -155,6 +161,92 @@ export interface CandidateMatch {
   missing_skills: string[]
   status: CandidateStatus
   created_at: string
+  invited_at: string | null
+  proof_id: string | null
+  decision: ProofDecision
+  decision_due_at: string | null
+  decided_at: string | null
+  feedback: string | null
+  candidate_response: IntroResponse | null
+  proof: { id: string; score: number; report: ProofReport; completed_at: string } | null
+}
+
+// Proof of Fit: a timed, role-specific work sample graded per skill with quoted evidence.
+export type ProofStatus = 'in_progress' | 'completed' | 'abandoned'
+
+export interface ProofSkillScore {
+  skill: string
+  score: number
+  evidence: string[]
+  note: string
+}
+
+export interface ProofReport {
+  overall: number
+  summary: string
+  skills: ProofSkillScore[]
+  strengths: string[]
+  gaps: string[]
+  // Measured by the server, not judged by the AI.
+  integrity: { answered: number; pasted: number; late: number }
+}
+
+export interface ProofStep {
+  number: number
+  total: number
+  kind: 'main' | 'followup'
+  skill: string
+  question: string
+  asked_at: string | null
+  time_limit_s: number
+}
+
+export interface ProofAnswer {
+  kind: 'main' | 'followup'
+  skill: string
+  question: string
+  answer: string | null
+  seconds: number | null
+  pasted: boolean
+  late: boolean
+}
+
+export interface SkillProof {
+  id: string
+  posting_id: string | null
+  job_id: string | null
+  role_title: string
+  skills?: string[]
+  status: ProofStatus
+  score: number | null
+  report?: ProofReport | null
+  is_public: boolean
+  public_slug: string | null
+  created_at: string
+  completed_at: string | null
+  step?: ProofStep | null
+  answers?: ProofAnswer[]
+}
+
+export interface ProofInvitation {
+  id: string
+  posting_id: string
+  invited_at: string
+  proof_id: string | null
+  decision: ProofDecision
+  decision_due_at: string | null
+  decided_at: string | null
+  feedback: string | null
+  candidate_response: IntroResponse | null
+  posting: { title: string; company: string; location: string | null; job_type: JobType; response_sla_days: number } | null
+}
+
+export interface PublicProof {
+  name: string
+  role_title: string
+  score: number
+  report: ProofReport
+  completed_at: string
 }
 
 export interface ResumeData {

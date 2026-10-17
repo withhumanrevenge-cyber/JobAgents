@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion"
 import { createClient } from "@/lib/supabase/client"
-import { LayoutDashboard, Briefcase, FileCheck, Settings, LogOut, ShieldCheck, Building2, X } from "lucide-react"
+import { LayoutDashboard, Briefcase, FileCheck, BadgeCheck, Settings, LogOut, ShieldCheck, Building2, X } from "lucide-react"
 import { spring } from "@/lib/motion"
 import { useDashboardStore } from "@/store/dashboardStore"
 
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/dashboard",    icon: LayoutDashboard, label: "Dashboard" },
   { href: "/jobs",         icon: Briefcase,        label: "Jobs" },
   { href: "/applications", icon: FileCheck,        label: "Applications" },
+  { href: "/proofs",       icon: BadgeCheck,       label: "Proofs" },
   { href: "/settings",     icon: Settings,         label: "Settings" },
 ]
 

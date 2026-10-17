@@ -11,11 +11,12 @@ import { CREDIT_COST } from "@/lib/plans"
 import { useAISettings } from "@/hooks/useAISettings"
 import Link from "next/link"
 import { ResumeData, Match, InterviewQuestion } from "@/types"
-import { Loader2, Calendar, MapPin, DollarSign, ExternalLink, Briefcase, FileCheck, CheckCircle, MessageSquare, ChevronDown, Zap, Copy, X } from "lucide-react"
+import { Loader2, Calendar, MapPin, DollarSign, ExternalLink, Briefcase, FileCheck, CheckCircle, MessageSquare, ChevronDown, Zap, Copy, X, BadgeCheck } from "lucide-react"
 import { calculateDaysAgo } from "@/lib/utils"
 import { Reveal } from "@/components/motion/Reveal"
 import { spring } from "@/lib/motion"
 import { apiFetch } from "@/lib/api"
+import { startProof } from "@/lib/proofs"
 
 const ResumePreview = dynamic(
   () => import("@/components/resume/ResumePreview").then((mod) => mod.ResumePreview),
@@ -73,6 +74,7 @@ export default function JobDetailPage() {
   const [tailoredResume, setTailoredResume] = useState<ResumeData | null>(null)
   const [appliedLoading, setAppliedLoading] = useState(false)
   const [generatingInterview, setGeneratingInterview] = useState(false)
+  const [startingProof, setStartingProof]   = useState(false)
   const [openQuestion, setOpenQuestion]     = useState<number | null>(null)
   const [smartApplying, setSmartApplying]   = useState(false)
   const [coverLetter, setCoverLetter]       = useState<string | null>(null)
@@ -137,6 +139,17 @@ export default function JobDetailPage() {
       setMatch((prev) => prev ? { ...prev, id: data.match_id ?? prev.id, interview_questions: data.questions, interview_generated_at: new Date().toISOString() } : null)
     } catch (err: unknown) { showError(err, "Interview generation failed.") }
     finally { setGeneratingInterview(false) }
+  }
+
+  const handleProveFit = async () => {
+    if (!match) return
+    setStartingProof(true)
+    try {
+      router.push(`/proofs/${await startProof({ job_id: match.job_id })}`)
+    } catch (err: unknown) {
+      showError(err, "Couldn't start the proof.")
+      setStartingProof(false)
+    }
   }
 
   const handleTailorResume = async () => {
@@ -351,6 +364,18 @@ export default function JobDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+
+          <div className={card}>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Proof of Fit</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Answer 3 timed questions about this role. Get a skill-by-skill report with quotes from your answers, and a link to put in your application.
+            </p>
+            <button onClick={handleProveFit} disabled={startingProof}
+              className="w-full border border-border text-foreground text-xs font-medium py-2 rounded-md hover:border-foreground/40 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+              {startingProof && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {startingProof ? "Preparing questions…" : "Prove your fit · about 15 min"}
+            </button>
           </div>
 
           <div className={card}>

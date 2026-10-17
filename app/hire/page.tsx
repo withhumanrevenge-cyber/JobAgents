@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Loader2, Plus, Users, Briefcase, ArrowRight } from "lucide-react"
+import { Loader2, Plus, Users, Briefcase, ArrowRight, Clock } from "lucide-react"
 import { JOB_TYPE_LABEL } from "@/lib/status"
 import type { JobPosting, JobType } from "@/types"
 import { apiFetch } from "@/lib/api"
@@ -11,12 +11,13 @@ type PostingRow = JobPosting & { candidate_count: number }
 
 export default function HireDashboard() {
   const [postings, setPostings] = useState<PostingRow[]>([])
+  const [responseRate, setResponseRate] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     apiFetch("/api/hire/postings")
       .then((r) => r.json())
-      .then((d) => { if (!d.error) setPostings(d.postings) })
+      .then((d) => { if (!d.error) { setPostings(d.postings); setResponseRate(d.response_rate ?? null) } })
       .finally(() => setLoading(false))
   }, [])
 
@@ -56,10 +57,11 @@ export default function HireDashboard() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard icon={Briefcase} label="Open roles" value={openRoles} />
         <StatCard icon={Briefcase} label="Total roles" value={postings.length} />
         <StatCard icon={Users} label="Candidates" value={totalCandidates} />
+        <StatCard icon={Clock} label="On-time decisions" value={responseRate === null ? "—" : `${responseRate}%`} />
       </div>
 
       <div className="bg-card border border-border rounded-lg divide-y divide-gray-100">
@@ -86,7 +88,7 @@ export default function HireDashboard() {
   )
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number }) {
+function StatCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number | string }) {
   return (
     <div className="bg-card border border-border rounded-lg p-4">
       <div className="flex items-center gap-1.5 text-muted-foreground mb-2">
