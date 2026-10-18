@@ -168,19 +168,41 @@ def rank_by_relevance(jobs: list[dict[str, Any]], scorer: Callable[[dict[str, An
     return [j for _, j in sorted(relevant, key=lambda pair: -pair[0])]
 
 
-async def _matched_job_ids(user_id: str) -> set[str]:
+async def _matched_jobs(user_id: str) -> tuple[set[str], set[str]]:
+    """Job ids this user already has a match for, and those jobs' dedupe keys."""
     # PostgREST caps responses at 1000 rows; heavy users have far more matches than that.
     db = await get_db()
     ids: set[str] = set()
+    keys: set[str] = set()
     page = 1000
     offset = 0
     while True:
-        res = await db.table("matches").select("job_id").eq("user_id", user_id).range(offset, offset + page - 1).execute()
+        res = await (db.table("matches").select("job_id, job:jobs(dedupe_key)").eq("user_id", user_id)
+                     .order("id").range(offset, offset + page - 1).execute())
         rows = res.data or []
-        ids.update(r["job_id"] for r in rows)
+        for r in rows:
+            ids.add(r["job_id"])
+            if (r.get("job") or {}).get("dedupe_key"):
+                keys.add(r["job"]["dedupe_key"])
         if len(rows) < page:
-            return ids
+            return ids, keys
         offset += page
+
+
+def unscored_unique(pool: list[dict[str, Any]], matched_ids: set[str], matched_keys: set[str]) -> list[dict[str, Any]]:
+    """Jobs the user has no score for yet, one per role: a posting whose role (dedupe_key) was
+    already scored, or appears earlier in the pool, is the same job listed again, so it gets no
+    AI call. The job page lists every posting's link."""
+    seen = set(matched_keys)
+    unique = []
+    for job in pool:
+        key = job.get("dedupe_key")
+        if job["id"] in matched_ids or (key and key in seen):
+            continue
+        if key:
+            seen.add(key)
+        unique.append(job)
+    return unique
 
 
 async def _candidate_pool(sources: list[str], country_name: str | None) -> list[dict[str, Any]]:
@@ -193,7 +215,7 @@ async def _candidate_pool(sources: list[str], country_name: str | None) -> list[
     async def from_source(source: str) -> list[dict[str, Any]]:
         q = (
             db.table("jobs")
-            .select("id, title, company, location, tags, description, posted_date, source, country")
+            .select("id, title, company, location, tags, description, posted_date, source, country, dedupe_key")
             .eq("source", source)
             .gte("posted_date", cutoff)
             .order("posted_date", desc=True)
@@ -264,8 +286,8 @@ async def _match_jobs_for_user(
 
     country_name = COUNTRY_NAME.get((profile.get("target_country") or "").upper())
     pool = await _candidate_pool(sources_for(plan), country_name)
-    matched_ids = await _matched_job_ids(user_id)
-    unmatched = rank_by_relevance([j for j in pool if j["id"] not in matched_ids], relevance_scorer(profile, resume))
+    matched_ids, matched_keys = await _matched_jobs(user_id)
+    unmatched = rank_by_relevance(unscored_unique(pool, matched_ids, matched_keys), relevance_scorer(profile, resume))
 
     batch = unmatched[: min(limit or BATCH_LIMIT, budget)]
     threshold = profile.get("match_threshold")

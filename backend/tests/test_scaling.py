@@ -179,3 +179,17 @@ async def test_adzuna_is_asked_for_the_newest_jobs(monkeypatch):
     await fetch_adzuna_jobs("data analyst", "IN", pages=1)
     params = route.calls.last.request.url.params
     assert params["sort_by"] == "date" and params["max_days_old"] == str(JOB_MAX_AGE_DAYS)
+
+
+def test_each_role_is_scored_once_per_user():
+    from app.agents.matching import unscored_unique
+    pool = [
+        {"id": "a1", "dedupe_key": "ai engineer|booz allen hamilton"},
+        {"id": "a2", "dedupe_key": "ai engineer|booz allen hamilton"},   # same role, another city
+        {"id": "b1", "dedupe_key": "data analyst|groww"},                # role already scored
+        {"id": "c1", "dedupe_key": "backend engineer|zeta"},             # job already scored
+        {"id": "d1", "dedupe_key": None},                                # no key yet: kept
+        {"id": "d2", "dedupe_key": None},
+    ]
+    got = unscored_unique(pool, matched_ids={"c1"}, matched_keys={"data analyst|groww"})
+    assert [j["id"] for j in got] == ["a1", "d1", "d2"]

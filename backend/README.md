@@ -89,10 +89,10 @@ in the answers; paste and over-time flags are measured by the server, not judged
 ## Database prerequisites
 
 Run in the Supabase SQL editor, in order, before the first deploy: `supabase/migrations/009_schema_fixes.sql`,
-`010_credits_functions.sql`, `011_user_ai_keys.sql`, `012_proof_of_fit.sql`, then `013_admin_funnel.sql`.
+`010_credits_functions.sql`, `011_user_ai_keys.sql`, `012_proof_of_fit.sql`, `013_admin_funnel.sql`, then `014_job_dedupe_key.sql`.
 The backend calls `credits_used_this_month` and writes `profiles.last_matched_at` (010), stores users'
 AI keys in `user_ai_keys` (011), Proof of Fit in `skill_proofs` and `candidate_matches` (012), and
-reads the admin funnel from `admin_funnel()` (013). 012 also makes `candidate_matches` read-only
+reads the admin funnel from `admin_funnel()` (013), and groups duplicate postings by `jobs.dedupe_key` (014). 012 also makes `candidate_matches` read-only
 from the browser.
 
 ## Deploying (Render)

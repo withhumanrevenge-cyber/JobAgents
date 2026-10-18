@@ -7,7 +7,7 @@ import { effectiveStatus } from "@/lib/status"
 
 // Select every job column the UI touches — avoids `*` payload bloat
 // (job.description alone can be several KB per row).
-const JOB_COLUMNS = "id, title, company, location, country, region, remote, job_type, experience_level, url, description, salary_range, tags, posted_date, source, source_id, created_at"
+const JOB_COLUMNS = "id, title, company, location, country, region, remote, job_type, experience_level, url, description, salary_range, tags, posted_date, source, source_id, created_at, dedupe_key"
 
 // Cap each query so we never hit Supabase's 1000-row default.
 const ACTIVE_LIMIT = 500
@@ -16,6 +16,30 @@ const SKIPPED_LIMIT = 500
 
 const OPEN_STATUSES: JobStatus[] = ["pending", "reviewed"]
 const TRACKED_STATUSES: JobStatus[] = ["applied", "interview", "offer", "rejected"]
+
+const TRACKED = new Set<JobStatus>(TRACKED_STATUSES)
+const postedTime = (m: Match) => (m.job?.posted_date ? new Date(m.job.posted_date).getTime() : 0)
+
+// Which of two matches for the same role to show: the one the user is tracking (applied,
+// interview...), then the higher score, then the newer posting.
+function preferred(a: Match, b: Match): Match {
+  const ta = TRACKED.has(a.status), tb = TRACKED.has(b.status)
+  if (ta !== tb) return ta ? a : b
+  if (a.match_score !== b.match_score) return a.match_score > b.match_score ? a : b
+  return postedTime(a) >= postedTime(b) ? a : b
+}
+
+// The same role posted several times (other cities, recruiters, boards) shows once. Its other
+// postings are listed with their links on the job page.
+function oneRowPerJob(rows: Match[]): Match[] {
+  const byRole = new Map<string, Match>()
+  for (const m of rows) {
+    const key = m.job?.dedupe_key || m.job_id
+    const current = byRole.get(key)
+    byRole.set(key, current ? preferred(current, m) : m)
+  }
+  return [...byRole.values()]
+}
 
 export function useJobs() {
   const supabase = useMemo(() => createClient(), [])
@@ -79,7 +103,7 @@ export function useJobs() {
       // Re-sort matched vs below threshold by the current threshold (see effectiveStatus).
       const threshold = profileRes.data?.match_threshold ?? 70
       const rows: Match[] = [...(openRes.data || []), ...(trackedRes.data || []), ...(skippedRes.data || [])]
-      setMatches(rows.map((m) => ({ ...m, status: effectiveStatus(m.status, m.match_score, threshold) })))
+      setMatches(oneRowPerJob(rows.map((m) => ({ ...m, status: effectiveStatus(m.status, m.match_score, threshold) }))))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load jobs data.")
     } finally {
