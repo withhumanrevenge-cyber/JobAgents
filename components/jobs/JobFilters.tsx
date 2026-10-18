@@ -1,9 +1,9 @@
 "use client"
 
 import { useMemo } from "react"
-import { useDashboardStore } from "@/store/dashboardStore"
+import { useDashboardStore, type StatusFilter } from "@/store/dashboardStore"
 import { Search, RotateCcw, MapPin, GraduationCap, Clock } from "lucide-react"
-import { JobStatus, JobType, ExperienceLevel, TimeFilter, Match } from "@/types"
+import { JobType, ExperienceLevel, TimeFilter, Match } from "@/types"
 import { STATUS_LABEL, JOB_TYPE_LABEL, SOURCE_LABEL, EXPERIENCE_LABEL, TIME_LABEL } from "@/lib/status"
 
 const TYPE_TABS: { value: JobType | "all"; label: string }[] = [
@@ -102,14 +102,12 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
           </div>
 
           {showStatusFilter && (
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as JobStatus | "all")} className={selectCls}>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as StatusFilter)} className={selectCls}>
               <option value="all">All statuses</option>
+              <option value="newest">Newest</option>
               <option value="reviewed">{STATUS_LABEL.reviewed}</option>
-              <option value="pending">{STATUS_LABEL.pending}</option>
-              <option value="applied">{STATUS_LABEL.applied}</option>
-              <option value="interview">{STATUS_LABEL.interview}</option>
-              <option value="offer">{STATUS_LABEL.offer}</option>
               <option value="skipped">{STATUS_LABEL.skipped}</option>
+              <option value="pending">{STATUS_LABEL.pending}</option>
             </select>
           )}
 

@@ -12,6 +12,9 @@ import { Loader2, LayoutGrid, List, Lock } from "lucide-react"
 import { Stagger } from "@/components/motion/Stagger"
 import { TIME_THRESHOLD_MS } from "@/lib/status"
 import { PLAN_CONFIG, effectivePlan } from "@/lib/plans"
+import type { Match } from "@/types"
+
+const postedAt = (m: Match) => (m.job?.posted_date ? new Date(m.job.posted_date).getTime() : 0)
 
 export default function JobsPage() {
   const { allJobRows, loading } = useJobs()
@@ -32,7 +35,7 @@ export default function JobsPage() {
       const postedAfter = !Number.isFinite(cutoffMs)
         || (job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : true)
       return (searchQuery === "" || q.includes(searchQuery.toLowerCase()))
-        && (statusFilter === "all" ? match.status !== "skipped" : match.status === statusFilter)
+        && (statusFilter === "all" || statusFilter === "newest" || match.status === statusFilter)
         && (sourceFilter === "all" || job.source === sourceFilter)
         && (jobTypeFilter === "all" || job.job_type === jobTypeFilter)
         && (countryFilter === "all" || job.country === countryFilter)
@@ -40,7 +43,9 @@ export default function JobsPage() {
         && (experienceFilter === "all" || job.experience_level === experienceFilter)
         && postedAfter
     })
-    .sort((a, b) => b.match_score - a.match_score)
+    .sort(statusFilter === "newest"
+      ? (a, b) => postedAt(b) - postedAt(a)
+      : (a, b) => b.match_score - a.match_score)
 
   const plan = effectivePlan(profile ?? {})
   const cap = PLAN_CONFIG[plan].maxVisibleMatches
@@ -97,7 +102,7 @@ export default function JobsPage() {
         <div className="text-center py-14">
           <p className="text-sm text-muted-foreground">No jobs found</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
-            Try <span className="font-medium text-foreground/80">Find new jobs</span>, clear your filters, or lower your match threshold in Settings. Jobs scoring below your threshold are under the <span className="font-medium text-foreground/80">Below threshold</span> status filter.
+            Try <span className="font-medium text-foreground/80">Find new jobs</span> or clear your filters.
           </p>
         </div>
       ) : viewMode === "table" ? (

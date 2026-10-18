@@ -8,7 +8,7 @@ interface StatsBarProps {
 }
 
 const CARDS = [
-  { key: "totalJobs",        label: "Jobs in feed" },
+  { key: "totalJobs",        label: "Jobs scored"  },
   { key: "matches",          label: "Matched"      },
   { key: "applicationsSent", label: "Applied"      },
   { key: "interviews",       label: "Interviews"   },
