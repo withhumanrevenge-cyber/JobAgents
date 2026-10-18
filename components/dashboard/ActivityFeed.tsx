@@ -6,8 +6,11 @@ interface ActivityFeedProps {
 }
 
 export function ActivityFeed({ recentMatches }: ActivityFeedProps) {
-  const activities = recentMatches
-    .filter((m) => m.status !== "skipped" && m.status !== "pending")
+  // Everything scored against the user's resume, newest first: matches and below-threshold
+  // results alike, plus tracked applications. Unscored jobs have nothing to report yet.
+  const activities = [...recentMatches]
+    .filter((m) => m.status !== "pending" && m.match_score >= 0)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5)
     .map((match) => {
       const where = `${match.job?.title} at ${match.job?.company}`
@@ -18,6 +21,7 @@ export function ActivityFeed({ recentMatches }: ActivityFeedProps) {
         case "offer":     text = `Offer received — ${where}`; break
         case "rejected":  text = `Rejected — ${where}`; break
         case "reviewed":  text = `${match.match_score}% matched — ${where}`; break
+        case "skipped":   text = `${match.match_score}%, below your threshold — ${where}`; break
         default:          text = `Matched — ${where}`
       }
       if (match.tailored_resume_json && match.status === "reviewed") {

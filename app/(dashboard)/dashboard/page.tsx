@@ -40,11 +40,12 @@ function DashboardHome() {
 
   useEffect(() => {
     if (matches.length > 0 || allJobRows.length > 0) {
-      const inFeed = (m: (typeof matches)[number]) => m.status !== "skipped"
+      // Every job scored against the user's resume, matched or below their threshold.
+      const scored = (m: (typeof matches)[number]) => m.match_score >= 0
       Promise.resolve().then(() =>
         setStats({
-          totalJobs:        allJobRows.filter(inFeed).length,
-          matches:          matches.filter((m) => (m.status === "reviewed" || m.status === "pending") && inFeed(m)).length,
+          totalJobs:        allJobRows.filter(scored).length,
+          matches:          matches.filter((m) => m.status === "reviewed" || m.status === "pending").length,
           applicationsSent: matches.filter((m) => m.status === "applied").length,
           interviews:       matches.filter((m) => m.status === "interview").length,
         })

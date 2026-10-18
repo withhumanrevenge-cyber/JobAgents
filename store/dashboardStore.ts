@@ -1,9 +1,13 @@
 import { create } from "zustand"
-import { JobStatus, JobType, ExperienceLevel, TimeFilter } from "@/types"
+import { JobType, ExperienceLevel, TimeFilter } from "@/types"
+
+// The Jobs page's status menu. "all" and "newest" show every job (newest sorts by posting
+// date); the rest pick one scoring outcome. Applications have their own page.
+export type StatusFilter = "all" | "newest" | "reviewed" | "skipped" | "pending"
 
 interface DashboardState {
   searchQuery: string
-  statusFilter: JobStatus | "all"
+  statusFilter: StatusFilter
   sourceFilter: string
   jobTypeFilter: JobType | "all"
   countryFilter: string
@@ -16,7 +20,7 @@ interface DashboardState {
   sidebarOpen: boolean
 
   setSearchQuery: (query: string) => void
-  setStatusFilter: (status: JobStatus | "all") => void
+  setStatusFilter: (status: StatusFilter) => void
   setSourceFilter: (source: string) => void
   setJobTypeFilter: (type: JobType | "all") => void
   setCountryFilter: (country: string) => void
