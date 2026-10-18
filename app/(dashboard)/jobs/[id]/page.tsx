@@ -10,7 +10,8 @@ import { ConsentModal } from "@/components/ui/ConsentModal"
 import { CREDIT_COST } from "@/lib/plans"
 import { useAISettings } from "@/hooks/useAISettings"
 import Link from "next/link"
-import { ResumeData, Match, InterviewQuestion } from "@/types"
+import { ResumeData, Match, InterviewQuestion, Job } from "@/types"
+import { SOURCE_LABEL } from "@/lib/status"
 import { Loader2, Calendar, MapPin, DollarSign, ExternalLink, Briefcase, FileCheck, CheckCircle, MessageSquare, ChevronDown, Zap, Copy, X, BadgeCheck } from "lucide-react"
 import { calculateDaysAgo } from "@/lib/utils"
 import { Reveal } from "@/components/motion/Reveal"
@@ -22,6 +23,8 @@ const ResumePreview = dynamic(
   () => import("@/components/resume/ResumePreview").then((mod) => mod.ResumePreview),
   { ssr: false, loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
 )
+
+type OtherPosting = Pick<Job, "id" | "url" | "source" | "location" | "posted_date">
 
 function stripHtml(html: string): string {
   return html
@@ -65,6 +68,7 @@ export default function JobDetailPage() {
   const supabase = React.useMemo(() => createClient(), [])
 
   const [match, setMatch]                   = useState<Match | null>(null)
+  const [otherPostings, setOtherPostings]   = useState<OtherPosting[]>([])
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState<string | null>(null)
   const [actionError, setActionError]       = useState<string | null>(null)
@@ -122,6 +126,19 @@ export default function JobDetailPage() {
   }, [params.id, supabase])
 
   useEffect(() => { if (params.id) void Promise.resolve().then(loadJobDetails) }, [params.id, loadJobDetails])
+
+  // The same role posted elsewhere (other cities, recruiters, boards): one job, several links.
+  const dedupeKey = match?.job?.dedupe_key
+  const jobId = match?.job?.id
+  useEffect(() => {
+    if (!dedupeKey || !jobId) return
+    let cancelled = false
+    void supabase.from("jobs").select("id, url, source, location, posted_date")
+      .eq("dedupe_key", dedupeKey).neq("id", jobId)
+      .order("posted_date", { ascending: false }).limit(20)
+      .then(({ data }) => { if (!cancelled) setOtherPostings((data as OtherPosting[]) ?? []) })
+    return () => { cancelled = true }
+  }, [dedupeKey, jobId, supabase])
 
   // Generating something for an unscored job creates its match row server-side; switch the
   // page from the placeholder "pending-" id to the real one so later saves hit that row.
@@ -272,6 +289,18 @@ export default function JobDetailPage() {
           </a>
         </div>
       </div>
+      {otherPostings.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-3 text-xs">
+          <span className="text-muted-foreground">Also posted ({otherPostings.length}):</span>
+          {otherPostings.map((p) => (
+            <a key={p.id} href={p.url} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 text-foreground/80 hover:text-foreground underline-offset-2 hover:underline">
+              {SOURCE_LABEL[p.source] ?? p.source}{p.location ? ` · ${p.location}` : ""}
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          ))}
+        </div>
+      )}
       </Reveal>
 
       {actionError && (

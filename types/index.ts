@@ -37,6 +37,9 @@ export interface Job {
   source: JobSource
   source_id: string
   created_at: string
+  // Same role (title + company), computed by the database (migration 014). Postings that share
+  // it are one job listed in several places.
+  dedupe_key?: string | null
 }
 
 export interface ParsedResume {
