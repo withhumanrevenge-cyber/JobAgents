@@ -11,9 +11,10 @@ import { useDashboardStore } from "@/store/dashboardStore"
 import { Loader2, LayoutGrid, List, Lock } from "lucide-react"
 import { Stagger } from "@/components/motion/Stagger"
 import { TIME_THRESHOLD_MS } from "@/lib/status"
-import { PLAN_CONFIG, effectivePlan } from "@/lib/plans"
+import { PLAN_CONFIG, JOB_MAX_AGE_DAYS, effectivePlan } from "@/lib/plans"
 import type { Match } from "@/types"
 
+const DAY_MS = 24 * 60 * 60 * 1000
 const postedAt = (m: Match) => (m.job?.posted_date ? new Date(m.job.posted_date).getTime() : 0)
 
 export default function JobsPage() {
@@ -35,7 +36,9 @@ export default function JobsPage() {
       const postedAfter = !Number.isFinite(cutoffMs)
         || (job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : true)
       return (searchQuery === "" || q.includes(searchQuery.toLowerCase()))
-        && (statusFilter === "all" || statusFilter === "newest" || match.status === statusFilter)
+        && (statusFilter === "all" || match.status === statusFilter
+          // Newest: only jobs inside the freshness window, even ones the user applied to long ago.
+          || (statusFilter === "newest" && postedAt(match) >= openedAt - JOB_MAX_AGE_DAYS * DAY_MS))
         && (sourceFilter === "all" || job.source === sourceFilter)
         && (jobTypeFilter === "all" || job.job_type === jobTypeFilter)
         && (countryFilter === "all" || job.country === countryFilter)
