@@ -2,8 +2,8 @@ import { create } from "zustand"
 import { JobType, ExperienceLevel, TimeFilter } from "@/types"
 
 // The Jobs page's status menu. "all" and "newest" show every job (newest sorts by posting
-// date); the rest pick one scoring outcome. Applications have their own page.
-export type StatusFilter = "all" | "newest" | "reviewed" | "skipped" | "pending"
+// date); the other two pick matched or below threshold. Applications have their own page.
+export type StatusFilter = "all" | "newest" | "reviewed" | "skipped"
 
 interface DashboardState {
   searchQuery: string

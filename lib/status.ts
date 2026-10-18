@@ -10,6 +10,17 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   rejected:  "Rejected",
 }
 
+// Matched vs below threshold, judged by the score against the user's CURRENT threshold. The
+// status saved at scoring time used whatever threshold applied then, so a later threshold
+// change (or a job scored by older code) would otherwise leave jobs in the wrong group.
+// Tracked statuses (applied, interview, offer, rejected) and unscored jobs are kept as saved.
+export function effectiveStatus(status: JobStatus, score: number, threshold: number): JobStatus {
+  if ((status === "reviewed" || status === "skipped") && score >= 0) {
+    return score >= threshold ? "reviewed" : "skipped"
+  }
+  return status
+}
+
 export const STATUS_TONE: Record<JobStatus, string> = {
   pending:   "bg-gray-50 text-gray-500 border-gray-200",
   reviewed:  "bg-blue-50 text-blue-700 border-blue-200",
