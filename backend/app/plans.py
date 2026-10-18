@@ -15,6 +15,9 @@ _data = json.loads((Path(__file__).parent / "plans.json").read_text(encoding="ut
 PLAN_CONFIG: dict[str, dict[str, Any]] = _data["plans"]
 CREDIT_COST: dict[str, int] = _data["creditCost"]
 ACTION_LABEL: dict[str, str] = _data["actionLabel"]
+# Jobs older than this aren't fetched, scored or shown in feeds. They stay in the database, so
+# jobs a user applied to keep their match, tailored resume and cover letter.
+JOB_MAX_AGE_DAYS: int = _data["jobMaxAgeDays"]
 
 
 def effective_plan(profile: dict[str, Any] | None) -> Plan:

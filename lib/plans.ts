@@ -23,6 +23,10 @@ export const PLAN_CONFIG: Record<Plan, PlanConfig> = plans.plans
 
 export const CREDIT_COST: Record<UsageAction, number> = plans.creditCost
 
+// Jobs older than this leave the feed (applied ones stay in Applications). Same value the
+// backend uses for fetching and scoring.
+export const JOB_MAX_AGE_DAYS: number = plans.jobMaxAgeDays
+
 export const ACTION_LABEL: Record<UsageAction, string> = plans.actionLabel
 
 export const PLAN_LABEL: Record<Plan, string> = {

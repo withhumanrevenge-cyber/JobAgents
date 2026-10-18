@@ -134,3 +134,48 @@ async def test_one_match_run_per_user_at_a_time(monkeypatch):
     peak = 0
     await asyncio.gather(matching.match_jobs_for_user("a"), matching.match_jobs_for_user("b"))
     assert peak == 2
+
+
+def days_ago(n: float) -> str:
+    from datetime import datetime, timedelta, timezone
+    return (datetime.now(timezone.utc) - timedelta(days=n)).isoformat()
+
+
+def test_newer_postings_go_first_among_equally_relevant_jobs():
+    jobs = [
+        {**job("old", "Data Analyst", "SQL"), "posted_date": days_ago(20)},
+        {**job("week", "Data Analyst", "SQL"), "posted_date": days_ago(5)},
+        {**job("new", "Data Analyst", "SQL"), "posted_date": days_ago(1)},
+    ]
+    ranked = rank_by_relevance(jobs, relevance_scorer(PROFILE, RESUME))
+    assert [j["id"] for j in ranked] == ["new", "week", "old"]
+
+
+def test_freshness_never_lifts_an_unrelated_job():
+    jobs = [
+        {**job("relevant-old", "Senior Data Analyst", "SQL, Python"), "posted_date": days_ago(25)},
+        {**job("unrelated-new", "Head Chef", "Run the kitchen."), "posted_date": days_ago(0)},
+    ]
+    assert [j["id"] for j in rank_by_relevance(jobs, relevance_scorer(PROFILE, RESUME))] == ["relevant-old"]
+
+
+def test_jobs_older_than_the_window_are_not_stored():
+    from app.agents.job_fetcher import _is_recent
+    from app.plans import JOB_MAX_AGE_DAYS
+    assert _is_recent({"posted_date": days_ago(JOB_MAX_AGE_DAYS - 1)})
+    assert not _is_recent({"posted_date": days_ago(JOB_MAX_AGE_DAYS + 1)})
+    assert _is_recent({"posted_date": "2026-10-18T10:00:00"})  # naive timestamps count as UTC
+
+
+@respx.mock
+async def test_adzuna_is_asked_for_the_newest_jobs(monkeypatch):
+    from app.agents.job_fetcher import fetch_adzuna_jobs
+    from app.plans import JOB_MAX_AGE_DAYS
+    s = get_settings()
+    monkeypatch.setattr(s, "ADZUNA_APP_ID", "id")
+    monkeypatch.setattr(s, "ADZUNA_APP_KEY", "key")
+    route = respx.get(url__regex=r"https://api\.adzuna\.com/v1/api/jobs/in/search/\d+").mock(
+        return_value=httpx.Response(200, json={"results": []}))
+    await fetch_adzuna_jobs("data analyst", "IN", pages=1)
+    params = route.calls.last.request.url.params
+    assert params["sort_by"] == "date" and params["max_days_old"] == str(JOB_MAX_AGE_DAYS)
