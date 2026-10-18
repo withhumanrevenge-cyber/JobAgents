@@ -19,6 +19,7 @@ from app.countries import (
     DEFAULT_COUNTRY,
 )
 from app.db import get_db
+from app.plans import JOB_MAX_AGE_DAYS
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +34,6 @@ DEFAULT_QUERIES = [
     "ui ux designer",
 ]
 
-RECENT_DAYS = 180
 _ats_fetched_at = float("-inf")
 UPSERT_CHUNK = 500
 
@@ -59,7 +59,9 @@ def _is_recent(job: dict[str, Any]) -> bool:
         posted = datetime.fromisoformat(job["posted_date"])
     except (KeyError, TypeError, ValueError):
         return True
-    return datetime.now(timezone.utc) - posted <= timedelta(days=RECENT_DAYS)
+    if posted.tzinfo is None:
+        posted = posted.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - posted <= timedelta(days=JOB_MAX_AGE_DAYS)
 
 
 def parse_adzuna(results: list[dict[str, Any]], country: str) -> list[dict[str, Any]]:
@@ -128,6 +130,10 @@ async def fetch_adzuna_jobs(query: str | None, country: str, pages: int = 5) -> 
         "app_key": s.ADZUNA_APP_KEY,
         "title_only": query or "software engineer",
         "results_per_page": 50,
+        # Newest first: Adzuna's default relevance order returns the same top results on every
+        # call, which are already in the pool, so repeat searches found nothing new.
+        "sort_by": "date",
+        "max_days_old": JOB_MAX_AGE_DAYS,
     })
     pages = max(1, min(pages, 5))
     async with httpx.AsyncClient(timeout=15.0) as client:

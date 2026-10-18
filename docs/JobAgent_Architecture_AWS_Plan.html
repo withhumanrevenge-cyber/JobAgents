@@ -1,0 +1,679 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JobAgent Architecture and AWS Deployment Plan</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root {
+    --ink: #16202e; --muted: #5a6577; --rule: #d9dee6; --soft: #f3f5f8;
+    --accent: #1f4e8c; --accent-soft: #e6eef9; --amber: #a86400; --amber-soft: #fdf2df;
+    --good: #1d6b44; --good-soft: #e3f2e9; --bad: #a3332a; --bad-soft: #f8e4e1;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.5; background: #fff; }
+  h1, h2, h3 { margin: 0; line-height: 1.2; }
+  h1 { font-size: 26pt; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 15pt; font-weight: 700; color: var(--accent); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid var(--accent-soft); }
+  h3 { font-size: 11.2pt; font-weight: 650; margin: 14px 0 6px; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 8px; padding-left: 18px; }
+  li { margin-bottom: 3px; }
+  code { font-family: "Cascadia Mono", Consolas, monospace; font-size: 8.8pt; background: var(--soft); padding: 0 3px; border-radius: 3px; }
+  section { margin-bottom: 16px; }
+  .page { break-before: page; }
+  .avoid { break-inside: avoid; }
+  .eyebrow { font-size: 8.5pt; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); font-weight: 600; }
+  .muted { color: var(--muted); }
+  .small { font-size: 8.8pt; }
+
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .top { margin-top: 30mm; }
+  .cover .lede { font-size: 12.5pt; color: var(--muted); max-width: 150mm; margin-top: 10px; }
+  .meta { display: grid; grid-template-columns: 36mm 1fr; gap: 4px 10px; font-size: 9.5pt; margin-top: 18mm; }
+  .meta b { color: var(--muted); font-weight: 600; }
+  .box { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; background: #fff; }
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 9px 12px; border-radius: 0 6px 6px 0; margin: 8px 0 10px; }
+  .callout.warn { border-left-color: var(--amber); background: var(--amber-soft); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .kpi .n { font-size: 17pt; font-weight: 700; color: var(--accent); }
+  .kpi .l { font-size: 8.8pt; color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8.9pt; margin: 4px 0 10px; }
+  th, td { text-align: left; vertical-align: top; padding: 5px 7px; border-bottom: 1px solid var(--rule); }
+  th { background: var(--soft); font-weight: 600; font-size: 8.3pt; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  tr { break-inside: avoid; }
+  td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.k { font-weight: 600; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 7.8pt; padding: 1px 6px; border-radius: 99px; font-weight: 600; }
+  .t-keep { background: var(--good-soft); color: var(--good); }
+  .t-move { background: var(--accent-soft); color: var(--accent); }
+  .t-later { background: var(--amber-soft); color: var(--amber); }
+
+  figure { margin: 6px 0 12px; break-inside: avoid; }
+  figcaption { font-size: 8.6pt; color: var(--muted); margin-top: 4px; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font-family: "Segoe UI", Arial, sans-serif; fill: var(--ink); }
+  .phase { border: 1px solid var(--rule); border-radius: 6px; padding: 9px 12px; margin-bottom: 9px; break-inside: avoid; }
+  .phase .when { font-size: 8.3pt; font-weight: 700; color: var(--amber); text-transform: uppercase; letter-spacing: .06em; }
+  .phase h3 { margin-top: 2px; }
+  .check li { list-style: none; position: relative; padding-left: 4px; }
+  .check li::before { content: "☐"; position: absolute; left: -16px; color: var(--muted); }
+  .toc { columns: 2; column-gap: 14mm; font-size: 10pt; padding-left: 18px; }
+  .toc li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="top">
+    <div class="eyebrow">Architecture · Infrastructure plan</div>
+    <h1 style="margin-top:8px">JobAgent<br>Architecture and AWS Deployment Plan</h1>
+    <p class="lede">How the application is built today, the AWS setup recommended for its Python backend, and the step-by-step plan, costs, security and scaling path to get there.</p>
+    <div class="meta">
+      <b>Date</b><span>17 October 2026</span>
+      <b>Codebase</b><span>github.com/withhumanrevenge-cyber/JobAgents, branch <code>version2</code> at commit <code>8c756cc</code></span>
+      <b>Product</b><span>getjobagents.xyz: AI job matching, Smart Apply, Proof of Fit, recruiter hiring</span>
+      <b>AWS region</b><span>ap-south-1 (Mumbai), closest to the Indian user base</span>
+      <b>Status</b><span>Proposal. Nothing in this document has been provisioned yet.</span>
+    </div>
+  </div>
+  <div>
+    <p class="small muted"><strong>Contents</strong></p>
+    <ol class="toc">
+      <li>Summary and recommendation</li>
+      <li>Current architecture</li>
+      <li>Data model and security model</li>
+      <li>Key request flows</li>
+      <li>Target AWS architecture</li>
+      <li>Decisions and trade-offs</li>
+      <li>Security on AWS</li>
+      <li>CI/CD pipeline</li>
+      <li>Observability</li>
+      <li>Deployment plan and cutover</li>
+      <li>Cost estimate</li>
+      <li>Scaling roadmap</li>
+      <li>Risks and open questions</li>
+      <li>Appendix: configuration</li>
+    </ol>
+  </div>
+</div>
+
+<!-- 1 SUMMARY -->
+<section class="page">
+  <h2>1. Summary and recommendation</h2>
+  <p>JobAgent has two runtime parts: a <strong>Next.js 16 frontend</strong> on Vercel, and a <strong>FastAPI backend</strong> (<code>backend/</code>) that holds all business logic: AI matching, Smart Apply, Proof of Fit, billing webhooks, email and a daily background sync. Data, sign-in and file storage live in <strong>Supabase</strong> (managed Postgres, Auth and Storage).</p>
+  <p>The backend is already packaged as a Docker image and is stateless apart from a few in-memory guards, which makes it a straightforward fit for <strong>Amazon ECS on Fargate</strong>.</p>
+
+  <div class="callout">
+    <strong>Recommendation.</strong> Move the backend and its daily job to AWS (ECS Fargate behind an Application Load Balancer, scheduled by EventBridge). <strong>Keep the frontend on Vercel and the database on Supabase</strong> for now. Moving those adds weeks of work and risk for no user-visible gain at the current scale. Revisit them with the scaling triggers in section 12.
+  </div>
+
+  <div class="grid3" style="margin:10px 0 12px">
+    <div class="box kpi"><div class="n">3–4 days</div><div class="l">One engineer: build the infrastructure, cut over, harden</div></div>
+    <div class="box kpi"><div class="n">≈ $55–70</div><div class="l">Per month on AWS at launch scale (estimate, section 11)</div></div>
+    <div class="box kpi"><div class="n">1 task</div><div class="l">Single backend container by design; scale up before scaling out</div></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Component</th><th>Today</th><th>Target</th><th>Decision</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Backend API</td><td>Render web service (planned)</td><td>ECS Fargate service behind ALB</td><td><span class="tag t-move">Move to AWS</span></td></tr>
+      <tr><td class="k">Daily sync</td><td>Render cron (planned)</td><td>EventBridge Scheduler → ECS task</td><td><span class="tag t-move">Move to AWS</span></td></tr>
+      <tr><td class="k">Container images</td><td>Built by Render</td><td>Amazon ECR, built by GitHub Actions</td><td><span class="tag t-move">Move to AWS</span></td></tr>
+      <tr><td class="k">Secrets</td><td>Render env group</td><td>SSM Parameter Store (SecureString)</td><td><span class="tag t-move">Move to AWS</span></td></tr>
+      <tr><td class="k">DNS for the API</td><td>Registrar / Vercel</td><td>Route 53 record <code>api.getjobagents.xyz</code></td><td><span class="tag t-move">Move to AWS</span></td></tr>
+      <tr><td class="k">Frontend</td><td>Vercel</td><td>Vercel</td><td><span class="tag t-keep">Keep</span></td></tr>
+      <tr><td class="k">Database, Auth, Storage</td><td>Supabase</td><td>Supabase (same region as AWS if possible)</td><td><span class="tag t-keep">Keep</span></td></tr>
+      <tr><td class="k">Email, AI, payments</td><td>Resend, Groq + BYOK, Razorpay / Lemon Squeezy</td><td>Unchanged</td><td><span class="tag t-keep">Keep</span></td></tr>
+      <tr><td class="k">Error tracking</td><td>Sentry (backend)</td><td>Sentry + CloudWatch alarms</td><td><span class="tag t-keep">Keep + add</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 2 CURRENT ARCHITECTURE -->
+<section class="page">
+  <h2>2. Current architecture</h2>
+  <p>The browser talks to three places: Vercel for pages, the FastAPI backend for every <code>/api/...</code> call (authenticated with the user's Supabase access token), and Supabase directly for sign-in and a few owner-scoped reads protected by row-level security. The only server route left in Next.js is the Google OAuth callback, because it must set session cookies.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 430" role="img" aria-label="System context diagram">
+      <defs>
+        <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a6577"/></marker>
+      </defs>
+      <!-- browser -->
+      <rect x="10" y="175" width="135" height="70" rx="8" fill="#f3f5f8" stroke="#5a6577"/>
+      <text x="77" y="205" text-anchor="middle" font-size="13" font-weight="600">User's browser</text>
+      <text x="77" y="223" text-anchor="middle" font-size="10" fill="#5a6577">seeker · recruiter · admin</text>
+
+      <!-- vercel -->
+      <rect x="215" y="25" width="200" height="78" rx="8" fill="#fff" stroke="#16202e"/>
+      <text x="315" y="50" text-anchor="middle" font-size="13" font-weight="600">Next.js 16 frontend</text>
+      <text x="315" y="67" text-anchor="middle" font-size="10" fill="#5a6577">Vercel · React 19 · Tailwind</text>
+      <text x="315" y="83" text-anchor="middle" font-size="10" fill="#5a6577">auth middleware · OAuth callback</text>
+
+      <!-- api -->
+      <rect x="215" y="160" width="200" height="100" rx="8" fill="#e6eef9" stroke="#1f4e8c" stroke-width="1.6"/>
+      <text x="315" y="186" text-anchor="middle" font-size="13" font-weight="700" fill="#1f4e8c">FastAPI backend</text>
+      <text x="315" y="204" text-anchor="middle" font-size="10" fill="#16202e">routers → services / agents → db</text>
+      <text x="315" y="220" text-anchor="middle" font-size="10" fill="#5a6577">1 async uvicorn process</text>
+      <text x="315" y="236" text-anchor="middle" font-size="10" fill="#5a6577">Docker · Python 3.12</text>
+
+      <!-- sync -->
+      <rect x="215" y="320" width="200" height="70" rx="8" fill="#e6eef9" stroke="#1f4e8c" stroke-dasharray="5 3"/>
+      <text x="315" y="347" text-anchor="middle" font-size="13" font-weight="600" fill="#1f4e8c">Daily sync job</text>
+      <text x="315" y="364" text-anchor="middle" font-size="10" fill="#5a6577">same image · 06:00 UTC · ≤25 min</text>
+
+      <!-- right column -->
+      <rect x="490" y="10" width="260" height="76" rx="8" fill="#e3f2e9" stroke="#1d6b44"/>
+      <text x="620" y="34" text-anchor="middle" font-size="13" font-weight="600">Supabase</text>
+      <text x="620" y="51" text-anchor="middle" font-size="10" fill="#5a6577">Postgres + RLS · Auth (email, Google)</text>
+      <text x="620" y="67" text-anchor="middle" font-size="10" fill="#5a6577">Storage: private resumes bucket</text>
+
+      <rect x="490" y="100" width="260" height="56" rx="8" fill="#fff" stroke="#5a6577"/>
+      <text x="620" y="123" text-anchor="middle" font-size="12" font-weight="600">AI providers</text>
+      <text x="620" y="140" text-anchor="middle" font-size="10" fill="#5a6577">Groq (hosted) · own keys: Gemini, OpenAI, Claude…</text>
+
+      <rect x="490" y="168" width="260" height="56" rx="8" fill="#fff" stroke="#5a6577"/>
+      <text x="620" y="191" text-anchor="middle" font-size="12" font-weight="600">Job sources</text>
+      <text x="620" y="208" text-anchor="middle" font-size="10" fill="#5a6577">Adzuna · Greenhouse · Lever · Ashby (53 boards)</text>
+
+      <rect x="490" y="236" width="260" height="56" rx="8" fill="#fff" stroke="#5a6577"/>
+      <text x="620" y="259" text-anchor="middle" font-size="12" font-weight="600">Payments</text>
+      <text x="620" y="276" text-anchor="middle" font-size="10" fill="#5a6577">Razorpay (India, UPI) · Lemon Squeezy (intl)</text>
+
+      <rect x="490" y="304" width="260" height="44" rx="8" fill="#fff" stroke="#5a6577"/>
+      <text x="620" y="331" text-anchor="middle" font-size="12" font-weight="600">Resend <tspan font-weight="400" font-size="10" fill="#5a6577">· transactional email</tspan></text>
+      <rect x="10" y="300" width="135" height="50" rx="8" fill="#fff" stroke="#5a6577"/>
+      <text x="77" y="321" text-anchor="middle" font-size="12" font-weight="600">Sentry</text>
+      <text x="77" y="337" text-anchor="middle" font-size="10" fill="#5a6577">errors (API + cron)</text>
+
+      <!-- arrows -->
+      <path d="M145,195 C180,150 180,80 213,66" fill="none" stroke="#5a6577" stroke-width="1.4" marker-end="url(#a1)"/>
+      <text x="150" y="120" font-size="9.5" fill="#5a6577">pages</text>
+      <line x1="145" y1="210" x2="213" y2="210" stroke="#1f4e8c" stroke-width="1.8" marker-end="url(#a1)"/>
+      <text x="150" y="203" font-size="9.5" fill="#1f4e8c">/api + JWT</text>
+      <path d="M77,175 C77,0 470,-5 488,40" fill="none" stroke="#1d6b44" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#a1)"/>
+      <text x="250" y="14" font-size="9.5" fill="#1d6b44">sign-in · RLS-scoped reads</text>
+
+      <line x1="415" y1="185" x2="488" y2="60" stroke="#1d6b44" stroke-width="1.4" marker-end="url(#a1)"/>
+      <line x1="415" y1="195" x2="488" y2="128" stroke="#5a6577" stroke-width="1.3" marker-end="url(#a1)"/>
+      <line x1="415" y1="205" x2="488" y2="196" stroke="#5a6577" stroke-width="1.3" marker-end="url(#a1)"/>
+      <line x1="415" y1="220" x2="488" y2="262" stroke="#5a6577" stroke-width="1.3" marker-end="url(#a1)"/>
+      <line x1="415" y1="240" x2="488" y2="318" stroke="#5a6577" stroke-width="1.3" marker-end="url(#a1)"/>
+      <line x1="215" y1="245" x2="147" y2="305" stroke="#5a6577" stroke-width="1.1" marker-end="url(#a1)"/>
+      <path d="M488,280 C460,280 440,262 417,252" fill="none" stroke="#a86400" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#a1)"/>
+      <text x="424" y="290" font-size="9" fill="#a86400">webhooks</text>
+      <path d="M415,350 C450,350 460,335 488,330" fill="none" stroke="#5a6577" stroke-width="1.2" stroke-dasharray="2 3" marker-end="url(#a1)"/>
+      <text x="425" y="378" font-size="9.5" fill="#5a6577">DB, AI, sources, email</text>
+      <line x1="315" y1="318" x2="315" y2="262" stroke="#1f4e8c" stroke-width="1" stroke-dasharray="2 3"/>
+      <text x="322" y="295" font-size="9" fill="#5a6577">or POST /api/cron/sync</text>
+      <text x="10" y="425" font-size="9.5" fill="#5a6577">Solid: request path · Dashed: sign-in, webhooks, scheduled work</text>
+    </svg>
+    <figcaption>Figure 1. System context today. The backend is the only component holding service-role database credentials.</figcaption>
+  </figure>
+
+  <h3>Backend modules (<code>backend/app/</code>)</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>Modules</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td class="k">routers/</td><td>jobs, applications, resume, billing, hire, proofs, admin, ai_settings, misc</td><td>HTTP endpoints, auth and rate-limit dependencies, input validation (Pydantic). Thin.</td></tr>
+      <tr><td class="k">services/</td><td>ai, llm, llm_anthropic, usage, billing, email, crypto, matches</td><td>AI mode selection (BYOK / hosted / trial), provider calls with Groq fallback, credit ledger, webhook handling, email, Fernet encryption of BYOK keys.</td></tr>
+      <tr><td class="k">agents/</td><td>job_fetcher, ats_scraper, matching, writing, candidates, proof</td><td>Job ingestion and dedupe, relevance pre-ranking and AI scoring, resume/cover-letter/interview generation, candidate ranking, Proof of Fit questions and grading.</td></tr>
+      <tr><td class="k">jobs/</td><td>daily_sync, backfill_descriptions</td><td>Scheduled sync (proof deadlines, pool refresh, matching, digests, follow-ups); one-off data repair.</td></tr>
+      <tr><td class="k">core</td><td>main, config, auth, db, errors, ratelimit, plans, observability</td><td>App wiring, settings from env, Supabase token check, service-role client, error shape, in-memory rate limits, plan limits shared with the frontend, Sentry.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 3 DATA + SECURITY -->
+<section class="page">
+  <h2>3. Data model and security model</h2>
+  <p>The schema is <code>supabase/schema.sql</code> plus migrations <code>002</code>–<code>013</code>, all idempotent. Every table has row-level security; the backend uses the service-role key, which bypasses it, so every backend query filters by the authenticated user's id explicitly.</p>
+  <table>
+    <thead><tr><th>Table</th><th>Holds</th><th>Browser access</th></tr></thead>
+    <tbody>
+      <tr><td class="k">profiles</td><td>One per user: contact, parsed resume, targets, plan, account type, talent-pool opt-in</td><td>Own row (billing columns guarded by trigger)</td></tr>
+      <tr><td class="k">jobs</td><td>Shared, deduplicated job pool from all sources</td><td>Read only</td></tr>
+      <tr><td class="k">matches</td><td>Per user × job: score, reason, skills, status, tailored resume, cover letter, interview prep</td><td>Own rows</td></tr>
+      <tr><td class="k">usage_events</td><td>Credit ledger and token metering (hosted vs BYOK)</td><td>None; functions callable by service role only</td></tr>
+      <tr><td class="k">user_ai_keys</td><td>Users' own AI keys, Fernet-encrypted</td><td>None (deliberately no policies)</td></tr>
+      <tr><td class="k">webhook_events</td><td>Idempotency for payment webhooks</td><td>None</td></tr>
+      <tr><td class="k">job_postings</td><td>Recruiter roles, response window (<code>response_sla_days</code>)</td><td>Recruiter's own</td></tr>
+      <tr><td class="k">candidate_matches</td><td>Candidate × posting: fit score, invitation, proof, decision, deadline, intro response</td><td>Recruiter read only (012)</td></tr>
+      <tr><td class="k">skill_proofs</td><td>Proof of Fit steps, timings, report, share slug</td><td>Owner read only</td></tr>
+      <tr><td class="k">storage: resumes</td><td>Uploaded resume PDFs, private bucket</td><td>Owner's folder only</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Security controls already in the code</h3>
+  <div class="grid2">
+    <ul>
+      <li><strong>Auth:</strong> every API call carries the Supabase access token; the backend verifies it with Supabase Auth (30-second cache).</li>
+      <li><strong>Admin:</strong> requires both an allow-listed email and <code>profiles.is_admin</code>.</li>
+      <li><strong>Webhooks:</strong> HMAC-SHA256 signatures, constant-time comparison, idempotent by event id.</li>
+      <li><strong>Cron:</strong> <code>/api/cron/sync</code> refuses every call unless <code>CRON_SECRET</code> matches.</li>
+    </ul>
+    <ul>
+      <li><strong>BYOK keys:</strong> encrypted at rest with rotating Fernet keys; never returned to the browser; fixed provider base URLs.</li>
+      <li><strong>CORS:</strong> only the app origin (plus configured previews); no cookies.</li>
+      <li><strong>Privacy:</strong> recruiters get contact details only after the candidate accepts an introduction.</li>
+      <li><strong>Errors:</strong> internal details stay in logs; Sentry sends no request bodies or IPs.</li>
+    </ul>
+  </div>
+  <div class="callout warn small">
+    <strong>Constraint that shapes the AWS design:</strong> rate limits, the per-user match lock, the per-proof answer lock and the "sync already running" guard live in process memory. They are correct for <strong>one</strong> backend process. The AWS service therefore runs one task; section 12 lists what changes before running more.
+  </div>
+</section>
+
+<!-- 4 FLOWS -->
+<section>
+  <h2>4. Key request flows</h2>
+  <div class="grid2">
+    <div class="box avoid">
+      <h3 style="margin-top:0">Find jobs</h3>
+      <ol class="small">
+        <li><code>POST /api/jobs/fetch</code> pulls Adzuna and company boards for the user's roles and country into the shared pool.</li>
+        <li>The browser loops <code>POST /api/match</code>; each call ranks unscored jobs by keyword overlap, then AI-scores up to 24 (4 at a time).</li>
+        <li>Scores are saved to <code>matches</code>; the loop ends when <code>remaining</code> is 0 or the plan cap is hit.</li>
+      </ol>
+    </div>
+    <div class="box avoid">
+      <h3 style="margin-top:0">Smart Apply</h3>
+      <ol class="small">
+        <li>Consent modal, then <code>POST /api/apply/smart</code>.</li>
+        <li>Credits are reserved atomically (<code>consume_credits</code>) unless the user's own key is used.</li>
+        <li>Two quality-model calls: tailored resume (with ATS score) and cover letter. Credits are refunded if either fails.</li>
+      </ol>
+    </div>
+    <div class="box avoid">
+      <h3 style="margin-top:0">Proof of Fit</h3>
+      <ol class="small">
+        <li><code>POST /api/proofs</code> writes 3 role-specific questions (our key, monthly cap).</li>
+        <li>Each answer is timed by the server; a follow-up is generated from it.</li>
+        <li>After 6 answers, grading scores skills with verified quotes; an invited proof starts the recruiter's decision clock.</li>
+      </ol>
+    </div>
+    <div class="box avoid">
+      <h3 style="margin-top:0">Payments and daily sync</h3>
+      <ol class="small">
+        <li>Checkout is created by the API; Razorpay or Lemon Squeezy calls the signed webhook, which updates the plan once per event.</li>
+        <li>Daily at 06:00 UTC: expire overdue recruiter decisions, refresh the job pool, match active users, send digests and 7-day follow-ups.</li>
+      </ol>
+    </div>
+  </div>
+  <p class="small muted">Timing note for the load balancer: the longest synchronous calls (Smart Apply, proof grading) take tens of seconds, so the ALB idle timeout is raised to 120 s (section 5).</p>
+</section>
+
+<!-- 5 TARGET AWS -->
+<section class="page">
+  <h2>5. Target AWS architecture</h2>
+  <figure>
+    <svg viewBox="0 0 760 560" role="img" aria-label="AWS deployment diagram">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a6577"/></marker>
+      </defs>
+      <!-- externals left -->
+      <rect x="8" y="70" width="118" height="54" rx="8" fill="#f3f5f8" stroke="#5a6577"/>
+      <text x="67" y="94" text-anchor="middle" font-size="12" font-weight="600">Users</text>
+      <text x="67" y="110" text-anchor="middle" font-size="9.5" fill="#5a6577">browser</text>
+      <rect x="8" y="170" width="118" height="54" rx="8" fill="#fff" stroke="#16202e"/>
+      <text x="67" y="193" text-anchor="middle" font-size="12" font-weight="600">Vercel</text>
+      <text x="67" y="209" text-anchor="middle" font-size="9.5" fill="#5a6577">Next.js frontend</text>
+      <rect x="8" y="350" width="118" height="54" rx="8" fill="#fff" stroke="#16202e"/>
+      <text x="67" y="373" text-anchor="middle" font-size="12" font-weight="600">GitHub Actions</text>
+      <text x="67" y="389" text-anchor="middle" font-size="9.5" fill="#5a6577">OIDC deploy role</text>
+
+      <!-- aws cloud -->
+      <rect x="150" y="10" width="602" height="430" rx="10" fill="#fbfcfe" stroke="#a86400" stroke-width="1.4"/>
+      <text x="164" y="32" font-size="12" font-weight="700" fill="#a86400">AWS · ap-south-1 (Mumbai)</text>
+
+      <rect x="166" y="46" width="160" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="246" y="64" text-anchor="middle" font-size="11" font-weight="600">Route 53</text>
+      <text x="246" y="78" text-anchor="middle" font-size="9" fill="#5a6577">api.getjobagents.xyz</text>
+
+      <!-- vpc -->
+      <rect x="166" y="100" width="410" height="290" rx="8" fill="#fff" stroke="#1f4e8c" stroke-dasharray="6 3"/>
+      <text x="178" y="119" font-size="10.5" font-weight="600" fill="#1f4e8c">VPC 10.20.0.0/16 · 2 public subnets in 2 AZs · no NAT gateway</text>
+
+      <rect x="180" y="140" width="160" height="78" rx="7" fill="#e6eef9" stroke="#1f4e8c"/>
+      <text x="260" y="162" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f4e8c">Application Load Balancer</text>
+      <text x="260" y="179" text-anchor="middle" font-size="9.5" fill="#16202e">HTTPS 443 · ACM certificate</text>
+      <text x="260" y="194" text-anchor="middle" font-size="9.5" fill="#5a6577">HTTP 80 → 443 redirect</text>
+      <text x="260" y="209" text-anchor="middle" font-size="9.5" fill="#5a6577">idle timeout 120 s · (WAF later)</text>
+
+      <rect x="390" y="140" width="172" height="92" rx="7" fill="#e6eef9" stroke="#1f4e8c" stroke-width="1.6"/>
+      <text x="476" y="161" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f4e8c">ECS Fargate service</text>
+      <text x="476" y="177" text-anchor="middle" font-size="9.5">jobagent-api · desired count 1</text>
+      <text x="476" y="192" text-anchor="middle" font-size="9.5" fill="#5a6577">0.5 vCPU · 1 GB · port 8000</text>
+      <text x="476" y="207" text-anchor="middle" font-size="9.5" fill="#5a6577">health check /health</text>
+      <text x="476" y="222" text-anchor="middle" font-size="9.5" fill="#5a6577">circuit breaker + rollback</text>
+
+      <rect x="390" y="270" width="172" height="78" rx="7" fill="#e6eef9" stroke="#1f4e8c" stroke-dasharray="5 3"/>
+      <text x="476" y="292" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f4e8c">ECS task (scheduled)</text>
+      <text x="476" y="308" text-anchor="middle" font-size="9.5">jobagent-daily-sync</text>
+      <text x="476" y="323" text-anchor="middle" font-size="9.5" fill="#5a6577">same image · command override</text>
+      <text x="476" y="338" text-anchor="middle" font-size="9.5" fill="#5a6577">python -m app.jobs.daily_sync</text>
+
+      <rect x="180" y="270" width="160" height="78" rx="7" fill="#fdf2df" stroke="#a86400"/>
+      <text x="260" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#a86400">Security groups</text>
+      <text x="260" y="309" text-anchor="middle" font-size="9.3">alb-sg: 80/443 from internet</text>
+      <text x="260" y="324" text-anchor="middle" font-size="9.3">api-sg: 8000 from alb-sg only</text>
+      <text x="260" y="339" text-anchor="middle" font-size="9.3">sync-sg: no inbound</text>
+
+      <!-- regional services -->
+      <rect x="592" y="100" width="148" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="666" y="118" text-anchor="middle" font-size="11" font-weight="600">Amazon ECR</text>
+      <text x="666" y="132" text-anchor="middle" font-size="9" fill="#5a6577">images tagged by git SHA</text>
+      <rect x="592" y="152" width="148" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="666" y="170" text-anchor="middle" font-size="11" font-weight="600">SSM Parameter Store</text>
+      <text x="666" y="184" text-anchor="middle" font-size="9" fill="#5a6577">/jobagent/prod/* SecureString</text>
+      <rect x="592" y="204" width="148" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="666" y="222" text-anchor="middle" font-size="11" font-weight="600">CloudWatch</text>
+      <text x="666" y="236" text-anchor="middle" font-size="9" fill="#5a6577">logs · alarms · dashboard</text>
+      <rect x="592" y="256" width="148" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="666" y="274" text-anchor="middle" font-size="11" font-weight="600">EventBridge Scheduler</text>
+      <text x="666" y="288" text-anchor="middle" font-size="9" fill="#5a6577">cron(0 6 * * ? *) UTC</text>
+      <rect x="592" y="308" width="148" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="666" y="326" text-anchor="middle" font-size="11" font-weight="600">SNS → email</text>
+      <text x="666" y="340" text-anchor="middle" font-size="9" fill="#5a6577">alarm notifications</text>
+      <rect x="592" y="360" width="148" height="40" rx="6" fill="#fff" stroke="#5a6577"/>
+      <text x="666" y="378" text-anchor="middle" font-size="11" font-weight="600">IAM · CloudTrail</text>
+      <text x="666" y="392" text-anchor="middle" font-size="9" fill="#5a6577">least-privilege roles · audit</text>
+      <text x="166" y="432" font-size="9.5" fill="#5a6577">Also: AWS Budgets alert, root MFA, IAM Identity Center for people.</text>
+
+      <!-- externals bottom -->
+      <rect x="150" y="470" width="602" height="80" rx="10" fill="#f3f5f8" stroke="#5a6577"/>
+      <text x="164" y="490" font-size="11" font-weight="700" fill="#5a6577">Outside AWS (unchanged)</text>
+      <g font-size="10">
+        <rect x="164" y="500" width="100" height="38" rx="6" fill="#e3f2e9" stroke="#1d6b44"/><text x="214" y="516" text-anchor="middle" font-weight="600">Supabase</text><text x="214" y="530" text-anchor="middle" font-size="8.5" fill="#5a6577">DB · Auth · Storage</text>
+        <rect x="272" y="500" width="92" height="38" rx="6" fill="#fff" stroke="#5a6577"/><text x="318" y="516" text-anchor="middle" font-weight="600">Groq + BYOK</text><text x="318" y="530" text-anchor="middle" font-size="8.5" fill="#5a6577">AI providers</text>
+        <rect x="372" y="500" width="92" height="38" rx="6" fill="#fff" stroke="#5a6577"/><text x="418" y="516" text-anchor="middle" font-weight="600">Job APIs</text><text x="418" y="530" text-anchor="middle" font-size="8.5" fill="#5a6577">Adzuna · ATS</text>
+        <rect x="472" y="500" width="92" height="38" rx="6" fill="#fff" stroke="#5a6577"/><text x="518" y="516" text-anchor="middle" font-weight="600">Payments</text><text x="518" y="530" text-anchor="middle" font-size="8.5" fill="#5a6577">Razorpay · LS</text>
+        <rect x="572" y="500" width="78" height="38" rx="6" fill="#fff" stroke="#5a6577"/><text x="611" y="516" text-anchor="middle" font-weight="600">Resend</text><text x="611" y="530" text-anchor="middle" font-size="8.5" fill="#5a6577">email</text>
+        <rect x="658" y="500" width="82" height="38" rx="6" fill="#fff" stroke="#5a6577"/><text x="699" y="516" text-anchor="middle" font-weight="600">Sentry</text><text x="699" y="530" text-anchor="middle" font-size="8.5" fill="#5a6577">errors</text>
+      </g>
+
+      <!-- arrows -->
+      <line x1="126" y1="90" x2="164" y2="68" stroke="#5a6577" stroke-width="1.2" marker-end="url(#a2)"/>
+      <text x="128" y="64" font-size="9" fill="#5a6577">DNS</text>
+      <path d="M126,106 C150,130 160,165 178,172" fill="none" stroke="#1f4e8c" stroke-width="1.8" marker-end="url(#a2)"/>
+      <text x="126" y="142" font-size="9" fill="#1f4e8c">HTTPS /api</text>
+      <line x1="67" y1="124" x2="67" y2="168" stroke="#5a6577" stroke-width="1.2" marker-end="url(#a2)"/>
+      <line x1="340" y1="182" x2="388" y2="182" stroke="#1f4e8c" stroke-width="1.8" marker-end="url(#a2)"/>
+      <line x1="592" y1="120" x2="564" y2="160" stroke="#5a6577" stroke-width="1.1" marker-end="url(#a2)"/>
+      <line x1="592" y1="172" x2="564" y2="182" stroke="#5a6577" stroke-width="1.1" marker-end="url(#a2)"/>
+      <line x1="564" y1="210" x2="590" y2="222" stroke="#5a6577" stroke-width="1.1" marker-end="url(#a2)"/>
+      <line x1="592" y1="276" x2="564" y2="300" stroke="#5a6577" stroke-width="1.2" marker-end="url(#a2)"/>
+      <line x1="666" y1="244" x2="666" y2="306" stroke="#5a6577" stroke-width="1" stroke-dasharray="2 3" marker-end="url(#a2)"/>
+      <path d="M126,377 C330,402 575,400 600,128" fill="none" stroke="#5a6577" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a2)"/>
+      <text x="250" y="397" font-size="9" fill="#5a6577">push image · update service</text>
+      <line x1="476" y1="232" x2="476" y2="268" stroke="#1f4e8c" stroke-width="0.8" stroke-dasharray="2 3"/>
+      <line x1="440" y1="348" x2="380" y2="498" stroke="#5a6577" stroke-width="1.3" marker-end="url(#a2)"/>
+      <path d="M562,200 C600,230 590,460 470,498" fill="none" stroke="#5a6577" stroke-width="1.3" marker-end="url(#a2)"/>
+      <text x="586" y="455" font-size="9" fill="#5a6577">outbound HTTPS</text>
+      <path d="M505,500 C330,468 172,445 172,330 L178,222" fill="none" stroke="#a86400" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#a2)"/>
+      <text x="300" y="466" font-size="9" fill="#a86400">webhooks → ALB</text>
+    </svg>
+    <figcaption>Figure 2. Target deployment. The API task has a public IP for outbound calls but accepts traffic only from the load balancer's security group.</figcaption>
+  </figure>
+
+  <table>
+    <thead><tr><th>Resource</th><th>Configuration</th></tr></thead>
+    <tbody>
+      <tr><td class="k">VPC</td><td><code>10.20.0.0/16</code>, two public subnets (<code>ap-south-1a</code>, <code>ap-south-1b</code>), internet gateway, no NAT gateway.</td></tr>
+      <tr><td class="k">ALB</td><td>Internet-facing, listeners 443 (TLS 1.2+, ACM cert for <code>api.getjobagents.xyz</code>) and 80 → 443 redirect. Target group: IP targets, port 8000, health check <code>/health</code> every 15 s, 2 healthy / 3 unhealthy. Idle timeout 120 s. Deregistration delay 30 s.</td></tr>
+      <tr><td class="k">ECS cluster</td><td><code>jobagent-prod</code>, Fargate capacity provider, Container Insights on.</td></tr>
+      <tr><td class="k">API service</td><td>Task definition <code>jobagent-api</code>: 0.5 vCPU, 1 GB, x86_64 Linux, image from ECR by git SHA, port 8000, secrets from SSM, logs to <code>/ecs/jobagent-api</code> (30-day retention). Desired count 1; deployment min 100% / max 200%; circuit breaker with rollback; health-check grace 60 s.</td></tr>
+      <tr><td class="k">Daily sync</td><td>Task definition <code>jobagent-daily-sync</code>: same image, command <code>python -m app.jobs.daily_sync</code>, 0.5 vCPU / 1 GB, logs to <code>/ecs/jobagent-daily-sync</code>. EventBridge Scheduler, <code>cron(0 6 * * ? *)</code> UTC, retry policy 0 (the job is idempotent but long).</td></tr>
+      <tr><td class="k">ECR</td><td>Repository <code>jobagent-api</code>, immutable tags, scan on push, lifecycle: keep last 20 images.</td></tr>
+      <tr><td class="k">Secrets</td><td>SSM Parameter Store SecureString under <code>/jobagent/prod/</code> (appendix), default KMS key.</td></tr>
+      <tr><td class="k">DNS</td><td>Route 53 hosted zone for the domain (or a delegated <code>api.</code> subdomain); alias A/AAAA record to the ALB.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 6 DECISIONS -->
+<section class="page">
+  <h2>6. Decisions and trade-offs</h2>
+  <table>
+    <thead><tr><th style="width:24%">Decision</th><th>Why</th><th style="width:30%">Cost of the choice</th></tr></thead>
+    <tbody>
+      <tr><td class="k">ECS Fargate</td><td>Runs the existing Dockerfile unchanged; no servers to patch; native scheduled tasks, rolling deploys with automatic rollback, IAM roles per task.</td><td>More setup than a PaaS; ALB is a fixed monthly cost.</td></tr>
+      <tr><td class="k">Not EKS</td><td>Kubernetes adds a ~$73/month control plane and real operational load for one container.</td><td>Revisit only with many services.</td></tr>
+      <tr><td class="k">Not a single EC2 + Docker</td><td>Cheapest (~$15/month), but you own OS patching, TLS renewal, restarts and deploy scripts.</td><td>Valid budget option; listed in section 11.</td></tr>
+      <tr><td class="k">Public subnets, no NAT</td><td>A NAT gateway costs ~$35+/month plus data. The task gets a public IP for outbound calls; its security group admits only the ALB.</td><td>Task is internet-addressable but closed; move to private subnets + NAT when compliance or scale requires.</td></tr>
+      <tr><td class="k">One API task</td><td>In-memory rate limits and locks are correct only in one process (section 3). Fargate restarts a failed task automatically.</td><td>A task restart is a ~1 minute outage; deploys briefly run two tasks, which is harmless.</td></tr>
+      <tr><td class="k">SSM Parameter Store</td><td>~30 values; standard parameters are free, Secrets Manager costs $0.40 per secret per month and adds rotation the app doesn't need.</td><td>No automatic rotation (rotate by hand, then redeploy).</td></tr>
+      <tr><td class="k">Keep Supabase</td><td>Auth, RLS policies, storage and the browser's direct reads are all built on it. Replacing it means Cognito + RDS + S3 + rewriting auth on both sides.</td><td>Database is outside AWS; keep both in the same region to limit latency.</td></tr>
+      <tr><td class="k">Keep Vercel</td><td>Best-supported host for Next.js 16 (middleware, server components, previews). Amplify Hosting is possible later.</td><td>Two vendors for one app.</td></tr>
+      <tr><td class="k">ap-south-1</td><td>Lowest latency to Indian users and closest to Indian payment and email traffic.</td><td>Slightly higher unit prices than us-east-1.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:14px">7. Security on AWS</h2>
+  <div class="grid2">
+    <div>
+      <h3>Accounts and people</h3>
+      <ul>
+        <li>Root user: hardware or app MFA, no access keys, used only for billing.</li>
+        <li>People sign in through IAM Identity Center with MFA; no long-lived IAM user keys.</li>
+        <li>CloudTrail on in all regions; AWS Budgets alert at 80% and 100% of the monthly budget.</li>
+        <li>Optional: separate <code>staging</code> and <code>prod</code> accounts under AWS Organizations.</li>
+      </ul>
+      <h3>Network</h3>
+      <ul>
+        <li><code>alb-sg</code>: inbound 80/443 from anywhere.</li>
+        <li><code>api-sg</code>: inbound 8000 only from <code>alb-sg</code>. Required because uvicorn trusts forwarded headers (<code>--forwarded-allow-ips='*'</code>).</li>
+        <li><code>sync-sg</code>: no inbound. Outbound 443 for both tasks.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>IAM roles (least privilege)</h3>
+      <ul>
+        <li><strong>Task execution role:</strong> pull from ECR, write its log groups, read <code>/jobagent/prod/*</code> parameters and decrypt with their KMS key.</li>
+        <li><strong>Task role:</strong> none needed today (the app calls no AWS APIs). Keep it empty.</li>
+        <li><strong>Scheduler role:</strong> <code>ecs:RunTask</code> on the sync task definition and <code>iam:PassRole</code> for its two roles.</li>
+        <li><strong>GitHub deploy role:</strong> assumed through OIDC, restricted to this repository's <code>main</code> branch; push to the one ECR repository, register task definitions, update the one service.</li>
+      </ul>
+      <h3>Data in transit</h3>
+      <ul>
+        <li>TLS at the ALB; all outbound calls (Supabase, AI, payments) are HTTPS.</li>
+        <li>Phase 3: AWS WAF on the ALB with AWS managed rules and a per-IP rate rule.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 8 CICD + 9 OBS -->
+<section class="page">
+  <h2>8. CI/CD pipeline</h2>
+  <figure>
+    <svg viewBox="0 0 760 140" role="img" aria-label="CI/CD pipeline">
+      <defs><marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1f4e8c"/></marker></defs>
+      <g font-size="10.5">
+        <rect x="5" y="30" width="108" height="64" rx="7" fill="#f3f5f8" stroke="#5a6577"/><text x="59" y="56" text-anchor="middle" font-weight="600">Push / merge</text><text x="59" y="72" text-anchor="middle" font-size="9" fill="#5a6577">to main</text>
+        <rect x="131" y="30" width="108" height="64" rx="7" fill="#fff" stroke="#5a6577"/><text x="185" y="56" text-anchor="middle" font-weight="600">Checks</text><text x="185" y="72" text-anchor="middle" font-size="9" fill="#5a6577">pytest · ruff</text><text x="185" y="85" text-anchor="middle" font-size="9" fill="#5a6577">lint · tsc</text>
+        <rect x="257" y="30" width="108" height="64" rx="7" fill="#fff" stroke="#5a6577"/><text x="311" y="56" text-anchor="middle" font-weight="600">Build image</text><text x="311" y="72" text-anchor="middle" font-size="9" fill="#5a6577">docker buildx</text><text x="311" y="85" text-anchor="middle" font-size="9" fill="#5a6577">linux/amd64</text>
+        <rect x="383" y="30" width="108" height="64" rx="7" fill="#fff" stroke="#5a6577"/><text x="437" y="56" text-anchor="middle" font-weight="600">Push to ECR</text><text x="437" y="72" text-anchor="middle" font-size="9" fill="#5a6577">tag = git SHA</text><text x="437" y="85" text-anchor="middle" font-size="9" fill="#5a6577">scan on push</text>
+        <rect x="509" y="30" width="108" height="64" rx="7" fill="#fff" stroke="#5a6577"/><text x="563" y="56" text-anchor="middle" font-weight="600">Task defs</text><text x="563" y="72" text-anchor="middle" font-size="9" fill="#5a6577">api + sync</text><text x="563" y="85" text-anchor="middle" font-size="9" fill="#5a6577">new revisions</text>
+        <rect x="635" y="30" width="120" height="64" rx="7" fill="#e6eef9" stroke="#1f4e8c"/><text x="695" y="56" text-anchor="middle" font-weight="700" fill="#1f4e8c">Rolling deploy</text><text x="695" y="72" text-anchor="middle" font-size="9" fill="#5a6577">wait for /health</text><text x="695" y="85" text-anchor="middle" font-size="9" fill="#5a6577">auto-rollback on fail</text>
+      </g>
+      <g stroke="#1f4e8c" stroke-width="1.6">
+        <line x1="113" y1="62" x2="129" y2="62" marker-end="url(#a3)"/><line x1="239" y1="62" x2="255" y2="62" marker-end="url(#a3)"/>
+        <line x1="365" y1="62" x2="381" y2="62" marker-end="url(#a3)"/><line x1="491" y1="62" x2="507" y2="62" marker-end="url(#a3)"/>
+        <line x1="617" y1="62" x2="633" y2="62" marker-end="url(#a3)"/>
+      </g>
+      <text x="5" y="122" font-size="9.5" fill="#5a6577">Pull requests run only the checks. Frontend deploys stay on Vercel's own Git integration. Migrations are applied by hand before the deploy that needs them.</text>
+    </svg>
+    <figcaption>Figure 3. One GitHub Actions workflow (<code>.github/workflows/deploy-api.yml</code>), authenticating to AWS through OIDC; no AWS keys are stored in GitHub.</figcaption>
+  </figure>
+  <ul>
+    <li><strong>Rollback:</strong> automatic if the new task fails health checks (deployment circuit breaker). Manual: <code>aws ecs update-service --task-definition jobagent-api:&lt;previous&gt;</code>, which takes about two minutes.</li>
+    <li><strong>Database changes:</strong> migrations are idempotent and additive; apply them in the Supabase SQL editor (staging first), then deploy. Never deploy code that needs a migration before the migration has run.</li>
+    <li><strong>Staging:</strong> a second service (<code>jobagent-api-staging</code>, its own SSM path and Supabase project) deployed from the <code>version2</code>/feature branches. Optional for launch, recommended before onboarding colleges.</li>
+  </ul>
+
+  <h2 style="margin-top:14px">9. Observability</h2>
+  <table>
+    <thead><tr><th>Signal</th><th>Source</th><th>Alarm (→ SNS email)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">API errors</td><td>ALB <code>HTTPCode_Target_5XX_Count</code></td><td>&gt; 10 in 5 minutes</td></tr>
+      <tr><td class="k">API down</td><td>Target group <code>HealthyHostCount</code></td><td>&lt; 1 for 2 minutes</td></tr>
+      <tr><td class="k">Latency</td><td>ALB <code>TargetResponseTime</code> p95</td><td>&gt; 30 s for 10 minutes (AI calls are slow by nature)</td></tr>
+      <tr><td class="k">Memory / CPU</td><td>ECS service metrics</td><td>Memory &gt; 85% or CPU &gt; 80% for 15 minutes</td></tr>
+      <tr><td class="k">Daily sync failed</td><td>EventBridge / ECS task exit code; log metric filter on "Daily sync crashed" and "Proof deadlines failed"</td><td>Any occurrence</td></tr>
+      <tr><td class="k">Daily sync missing</td><td>Log metric filter on "Daily sync done"</td><td>Missing for 26 hours</td></tr>
+      <tr><td class="k">Application exceptions</td><td>Sentry (<code>SENTRY_DSN</code>)</td><td>Sentry's own alert rules</td></tr>
+      <tr><td class="k">Spend</td><td>AWS Budgets</td><td>80% and 100% of monthly budget</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted">Product metrics (signup → interview funnel, Proof of Fit outcomes) are on the in-app admin page, backed by <code>admin_funnel()</code> (migration 013).</p>
+</section>
+
+<!-- 10 DEPLOYMENT PLAN -->
+<section class="page">
+  <h2>10. Deployment plan and cutover</h2>
+  <p>Infrastructure should be written as code (Terraform or AWS CDK) and kept in the repository under <code>infra/</code>, so production can be rebuilt and reviewed. The steps below are the order of work either way.</p>
+
+  <div class="phase">
+    <div class="when">Phase 0 · half a day · prerequisites</div>
+    <h3>Account and inputs</h3>
+    <ul class="check">
+      <li>Create the AWS account; root MFA; IAM Identity Center admin user; enable CloudTrail; Budgets alert (e.g. $100).</li>
+      <li>Confirm the Supabase project's region; if it isn't Mumbai, note the added latency (section 13).</li>
+      <li>Decide DNS: move the zone to Route 53, or delegate only <code>api.getjobagents.xyz</code>.</li>
+      <li>Collect every backend secret (appendix) from the current <code>.env</code> / dashboards.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <div class="when">Phase 1 · 1–1.5 days · build</div>
+    <h3>Infrastructure as code</h3>
+    <ul class="check">
+      <li>VPC, subnets, internet gateway, security groups.</li>
+      <li>ECR repository; push a first image by hand to prove the build.</li>
+      <li>SSM parameters under <code>/jobagent/prod/</code>.</li>
+      <li>ECS cluster, both task definitions, IAM roles, log groups.</li>
+      <li>ACM certificate (DNS validation), ALB, target group, listeners, Route 53 alias.</li>
+      <li>API service (desired count 1) with circuit breaker; confirm <code>https://api.getjobagents.xyz/health</code> returns <code>{"status":"ok"}</code>.</li>
+      <li>EventBridge schedule created <strong>disabled</strong> (enabled at cutover so two schedulers never run together).</li>
+      <li>GitHub OIDC provider and deploy role; <code>deploy-api.yml</code> workflow; first deploy through the pipeline.</li>
+      <li>CloudWatch alarms and SNS email subscription (confirm the subscription email).</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <div class="when">Phase 2 · half a day · cutover (low-traffic hour, IST night)</div>
+    <h3>Switch traffic</h3>
+    <ol>
+      <li>Apply migrations <code>009</code>–<code>013</code> in Supabase (staging first) if not yet applied.</li>
+      <li>Smoke test against the AWS URL with a test account: sign in, upload resume, Find jobs, Smart Apply, start and finish a Proof of Fit, recruiter invite and decision, admin page.</li>
+      <li>Vercel: set <code>NEXT_PUBLIC_API_URL=https://api.getjobagents.xyz</code>; set <code>CORS_ORIGINS</code> in SSM for preview URLs if used; redeploy the frontend.</li>
+      <li>Razorpay and Lemon Squeezy dashboards: webhook URLs to <code>https://api.getjobagents.xyz/api/webhooks/razorpay</code> and <code>/lemonsqueezy</code>; send a test event from each.</li>
+      <li>Disable any other scheduler (Render cron, GitHub cron), then enable the EventBridge schedule. Run the sync task once by hand and read its log.</li>
+      <li>Watch alarms, Sentry and logs for 24 hours. Keep the previous host running but idle for one week, then delete it.</li>
+    </ol>
+  </div>
+
+  <div class="phase">
+    <div class="when">Phase 3 · 1 day · hardening</div>
+    <h3>After launch</h3>
+    <ul class="check">
+      <li>AWS WAF on the ALB: AWS managed common rule set + per-IP rate limit.</li>
+      <li>Staging environment and a written runbook (deploy, rollback, rotate a secret, restore Supabase backup).</li>
+      <li>Supabase: confirm daily backups / point-in-time recovery on the paid plan; test a restore into staging.</li>
+      <li>Rotate any secret that was ever pasted into chat, email or a shared document.</li>
+    </ul>
+  </div>
+
+  <div class="callout warn small"><strong>Rollback at cutover:</strong> repoint <code>NEXT_PUBLIC_API_URL</code> and the webhooks back to the previous host and redeploy Vercel. Both hosts use the same Supabase database, so no data moves in either direction.</div>
+</section>
+
+<!-- 11 COST -->
+<section class="page">
+  <h2>11. Cost estimate</h2>
+  <p>Approximate on-demand prices for ap-south-1 at launch scale (one API task running 24/7, sync job ~30 minutes a day, light traffic). <strong>These are estimates; confirm with the AWS Pricing Calculator before committing.</strong> AI, Supabase, Vercel, Resend and payment fees are unchanged and not included.</p>
+  <table>
+    <thead><tr><th>Item</th><th>Basis</th><th>Per month (USD)</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Fargate: API task</td><td>0.5 vCPU + 1 GB × 730 h</td><td class="n">≈ 18–22</td></tr>
+      <tr><td class="k">Application Load Balancer</td><td>Hourly charge + low LCU usage</td><td class="n">≈ 18–25</td></tr>
+      <tr><td class="k">Public IPv4 addresses</td><td>ALB in 2 AZs + API task, $0.005 per IP-hour</td><td class="n">≈ 8–11</td></tr>
+      <tr><td class="k">Fargate: daily sync</td><td>0.5 vCPU + 1 GB × ~15 h</td><td class="n">≈ 0.5</td></tr>
+      <tr><td class="k">CloudWatch</td><td>Logs (a few GB), ~8 alarms, Container Insights</td><td class="n">≈ 3–8</td></tr>
+      <tr><td class="k">Route 53, ECR, SSM, SNS, Scheduler</td><td>One zone, &lt;2 GB images, standard parameters</td><td class="n">≈ 1–2</td></tr>
+      <tr><td class="k">Total (Phase 1–2)</td><td></td><td class="n"><strong>≈ 55–70</strong></td></tr>
+      <tr><td class="k">+ AWS WAF (Phase 3)</td><td>Web ACL + a few rules + requests</td><td class="n">≈ 8–12</td></tr>
+      <tr><td class="k">+ Staging environment</td><td>Second small service, shared ALB via host rule</td><td class="n">≈ 12–20</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Cheaper alternatives, if cost matters more than operations</h3>
+  <table>
+    <thead><tr><th>Option</th><th>Approx. per month</th><th>Trade-off</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Single EC2 (t3.small) + Docker + Caddy</td><td class="n">≈ 15–20</td><td>You patch the OS, handle restarts, write deploy scripts; cron via the host.</td></tr>
+      <tr><td class="k">Lightsail container service</td><td class="n">≈ 10–25</td><td>Simple, includes HTTPS endpoint; no scheduled tasks (use the <code>/api/cron/sync</code> endpoint with an external scheduler), fewer controls.</td></tr>
+      <tr><td class="k">Render (already configured)</td><td class="n">≈ 14</td><td>Least work; not AWS; fewer network and IAM controls.</td></tr>
+      <tr><td class="k">Fargate on Graviton (ARM)</td><td class="n">≈ −20% compute</td><td>Build a <code>linux/arm64</code> image; all dependencies have ARM wheels, but test first.</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted">Startups can apply for AWS Activate credits, which typically cover the first months of a setup this size.</p>
+
+  <h2 style="margin-top:14px">12. Scaling roadmap</h2>
+  <table>
+    <thead><tr><th style="width:32%">Signal</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>CPU or memory alarms, or p95 latency rising with traffic</td><td>Scale <strong>up</strong> the one task: 1 vCPU / 2 GB, then 2 vCPU / 4 GB. No code changes.</td></tr>
+      <tr><td>Need more than one API task (availability or load)</td><td>Move rate limits and the per-user / per-proof locks to a shared store (ElastiCache Serverless for Redis/Valkey, or Postgres advisory locks); then set desired count 2+ with target-tracking autoscaling.</td></tr>
+      <tr><td>Daily sync exceeds its 25-minute budget</td><td>Split by user batches into several scheduled tasks, or move matching to an SQS queue with a worker service.</td></tr>
+      <tr><td>Long AI calls hold connections (Smart Apply, grading)</td><td>Make them asynchronous: enqueue to SQS, worker writes result, browser polls (the matching loop already works this way).</td></tr>
+      <tr><td>Groq rate limits at placement-season peaks</td><td>Set the hosted fallback provider; raise <code>HOSTED_MAX_CONCURRENCY</code> only with a higher Groq tier.</td></tr>
+      <tr><td>Compliance or enterprise/college contracts need data in AWS</td><td>Private subnets + NAT; consider RDS for Postgres with logical replication from Supabase as a first step; keep Supabase Auth until a Cognito migration is planned.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 13 RISKS + APPENDIX -->
+<section class="page">
+  <h2>13. Risks and open questions</h2>
+  <table>
+    <thead><tr><th style="width:28%">Risk</th><th>Impact</th><th style="width:36%">Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Supabase region differs from Mumbai</td><td>Every API call adds cross-region round trips (tens to 200+ ms each; several per request).</td><td>Check first. If needed, run AWS in the Supabase region instead, or plan a Supabase region move.</td></tr>
+      <tr><td class="k">Single task restart</td><td>~1 minute of API errors while Fargate replaces it.</td><td>Health checks + alarms; scale-out path in section 12 when this matters.</td></tr>
+      <tr><td class="k">Two schedulers at once</td><td>Duplicate digests and follow-up emails.</td><td>Schedule created disabled; enable only after the old cron is off.</td></tr>
+      <tr><td class="k">Secrets exposure</td><td>Service-role key gives full database access.</td><td>SSM SecureString, least-privilege execution role, no secrets in images or GitHub; rotate after any leak.</td></tr>
+      <tr><td class="k">Migration/code order</td><td>Errors if code ships before its migration.</td><td>Migrations first, staging first; all migrations are idempotent.</td></tr>
+      <tr><td class="k">Cost drift</td><td>Logs, NAT or WAF added later raise the bill.</td><td>Budgets alerts; log retention 30 days; review monthly.</td></tr>
+      <tr><td class="k">Untested in production</td><td>Proof of Fit and the AWS stack have only passed automated checks.</td><td>Full smoke test at cutover; keep the old host for a week.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top:14px">Appendix: configuration</h2>
+  <p class="small">Each backend setting becomes an SSM parameter under <code>/jobagent/prod/</code> and is mapped into both task definitions as an environment variable of the same name. Non-secret values may be plain <code>environment</code> entries instead.</p>
+  <table class="small">
+    <thead><tr><th>Group</th><th>Variables</th><th>Type</th></tr></thead>
+    <tbody>
+      <tr><td class="k">App</td><td><code>ENVIRONMENT=production</code>, <code>APP_URL=https://getjobagents.xyz</code>, <code>CORS_ORIGINS</code>, <code>ADMIN_EMAILS</code></td><td>Plain</td></tr>
+      <tr><td class="k">Database</td><td><code>SUPABASE_URL</code>, <code>SUPABASE_SERVICE_ROLE_KEY</code></td><td>Secret</td></tr>
+      <tr><td class="k">AI</td><td><code>GROQ_API_KEY</code>, <code>GROQ_MODEL</code>, <code>GROQ_FAST_MODEL</code>, <code>HOSTED_MAX_CONCURRENCY</code>, <code>HOSTED_FALLBACK_PROVIDER</code>, <code>HOSTED_FALLBACK_API_KEY</code>, <code>HOSTED_FALLBACK_FAST_MODEL</code>, <code>HOSTED_FALLBACK_MODEL</code>, <code>BYOK_ENCRYPTION_KEY</code></td><td>Keys secret</td></tr>
+      <tr><td class="k">Jobs</td><td><code>ADZUNA_APP_ID</code>, <code>ADZUNA_APP_KEY</code></td><td>Secret</td></tr>
+      <tr><td class="k">Email</td><td><code>RESEND_API_KEY</code>, <code>RESEND_FROM</code></td><td>Key secret</td></tr>
+      <tr><td class="k">Cron</td><td><code>CRON_SECRET</code></td><td>Secret</td></tr>
+      <tr><td class="k">Razorpay</td><td><code>RAZORPAY_KEY_ID</code>, <code>RAZORPAY_KEY_SECRET</code>, <code>RAZORPAY_WEBHOOK_SECRET</code>, <code>RAZORPAY_PRO_PLAN_ID</code>, <code>RAZORPAY_PREMIUM_PLAN_ID</code></td><td>Secrets / IDs</td></tr>
+      <tr><td class="k">Lemon Squeezy</td><td><code>LEMONSQUEEZY_API_KEY</code>, <code>LEMONSQUEEZY_STORE_ID</code>, <code>LEMONSQUEEZY_PRO_VARIANT_ID</code>, <code>LEMONSQUEEZY_PREMIUM_VARIANT_ID</code>, <code>LEMONSQUEEZY_WEBHOOK_SECRET</code></td><td>Secrets / IDs</td></tr>
+      <tr><td class="k">Monitoring</td><td><code>SENTRY_DSN</code></td><td>Secret</td></tr>
+      <tr><td class="k">Frontend (Vercel)</td><td><code>NEXT_PUBLIC_API_URL</code>, <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td><td>Public</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted"><strong>Never rotate <code>BYOK_ENCRYPTION_KEY</code> by replacing it:</strong> add the new key first in the comma-separated list (newest first), deploy, and remove the old one only after every saved key has been re-encrypted; otherwise users' saved AI keys become unreadable.</p>
+  <p class="small muted">Resource names used in this document: cluster <code>jobagent-prod</code>; services/task definitions <code>jobagent-api</code>, <code>jobagent-daily-sync</code>; ECR <code>jobagent-api</code>; log groups <code>/ecs/jobagent-api</code>, <code>/ecs/jobagent-daily-sync</code>; parameters <code>/jobagent/prod/&lt;NAME&gt;</code>.</p>
+</section>
+
+</body>
+</html>

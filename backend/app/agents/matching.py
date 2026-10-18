@@ -11,7 +11,7 @@ from typing import Any
 from app.countries import COUNTRY_NAME
 from app.db import first, get_db
 from app.errors import ApiError
-from app.plans import PLAN_CONFIG, effective_plan, sources_for
+from app.plans import JOB_MAX_AGE_DAYS, PLAN_CONFIG, effective_plan, sources_for
 from app.services.ai import AIContext, get_ai
 from app.services.llm import parse_json
 
@@ -140,13 +140,28 @@ def relevance_scorer(profile: dict[str, Any], resume: dict[str, Any] | None) -> 
     return score
 
 
+def freshness_bonus(job: dict[str, Any], now: datetime | None = None) -> int:
+    """A few points for new postings, so among relevant jobs the newest are scored first.
+    Small next to a title match (6), so a fresh but unrelated job never jumps the queue."""
+    try:
+        posted = datetime.fromisoformat(str(job.get("posted_date")).replace("Z", "+00:00"))
+    except ValueError:
+        return 0
+    if posted.tzinfo is None:
+        posted = posted.replace(tzinfo=timezone.utc)
+    age = (now or datetime.now(timezone.utc)) - posted
+    return 3 if age <= timedelta(days=3) else 1 if age <= timedelta(days=7) else 0
+
+
 def rank_by_relevance(jobs: list[dict[str, Any]], scorer: Callable[[dict[str, Any]], int] | None) -> list[dict[str, Any]]:
-    """Most relevant first, dropping jobs with no overlap at all: those never get an AI call.
-    If nothing overlaps (an unusual resume), keep everything so the user still gets scores."""
+    """Most relevant first, newer postings ahead of older ones of similar relevance, dropping jobs
+    with no overlap at all: those never get an AI call. If nothing overlaps (an unusual resume),
+    keep everything so the user still gets scores."""
     if scorer is None:
         return jobs
+    now = datetime.now(timezone.utc)
     scored = [(scorer(j), j) for j in jobs]
-    relevant = [(s, j) for s, j in scored if s > 0]
+    relevant = [(s + freshness_bonus(j, now), j) for s, j in scored if s > 0]
     if not relevant:
         return jobs
     # sort is stable: ties keep the pool's recency order.
@@ -172,12 +187,15 @@ async def _candidate_pool(sources: list[str], country_name: str | None) -> list[
     """Recent jobs, an equal share per source, interleaved so the per-call batch spreads across
     sources instead of exhausting high-volume Adzuna first."""
     db = await get_db()
+    # Expired jobs are never scored; they'd only fill the feed with roles that have closed.
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=JOB_MAX_AGE_DAYS)).isoformat()
 
     async def from_source(source: str) -> list[dict[str, Any]]:
         q = (
             db.table("jobs")
             .select("id, title, company, location, tags, description, posted_date, source, country")
             .eq("source", source)
+            .gte("posted_date", cutoff)
             .order("posted_date", desc=True)
             .limit(PER_SOURCE_POOL)
         )

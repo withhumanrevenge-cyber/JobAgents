@@ -126,6 +126,24 @@ npm run dev                  # http://localhost:3000
 
 See [`.env.example`](.env.example) for the full list of environment variables.
 
+### Run with Docker
+
+Docker Compose starts the Next.js frontend on `http://localhost:3000` and the FastAPI backend on
+`http://localhost:8000`. The frontend's API URL is set at image build time, so it uses the
+browser-accessible backend URL.
+
+```bash
+# Copy `.env.example` to `.env` and fill in the public Supabase values, then copy
+# `backend/.env.example` to `backend/.env` and fill in the backend values.
+docker compose up --build
+```
+
+The public Supabase values are build arguments because Next.js embeds
+`NEXT_PUBLIC_*` values into the browser bundle. Rebuild after changing them.
+
+To stop the services, press `Ctrl+C` or run `docker compose down`. Do not put secrets in the
+Dockerfile or `docker-compose.yml`; `backend/.env` is ignored by Git and loaded only by Compose.
+
 ---
 
 ## Project Structure
@@ -173,4 +191,3 @@ All endpoints are served by the Python backend; see [`backend/README.md`](backen
 Designed and built end-to-end — frontend, backend, AI orchestration, billing, and infrastructure — by **[MONU]**.
 
 Feedback and opportunities welcome: **withhumanrevenge@gmail.com**
-
