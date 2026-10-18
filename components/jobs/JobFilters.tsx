@@ -107,7 +107,6 @@ export function JobFilters({ showStatusFilter = true, matches = [] }: JobFilters
               <option value="newest">Newest</option>
               <option value="reviewed">{STATUS_LABEL.reviewed}</option>
               <option value="skipped">{STATUS_LABEL.skipped}</option>
-              <option value="pending">{STATUS_LABEL.pending}</option>
             </select>
           )}
 

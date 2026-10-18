@@ -45,7 +45,7 @@ function DashboardHome() {
       Promise.resolve().then(() =>
         setStats({
           totalJobs:        allJobRows.filter(scored).length,
-          matches:          matches.filter((m) => m.status === "reviewed" || m.status === "pending").length,
+          matches:          matches.filter((m) => m.status === "reviewed").length,
           applicationsSent: matches.filter((m) => m.status === "applied").length,
           interviews:       matches.filter((m) => m.status === "interview").length,
         })

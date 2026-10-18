@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useDashboardStore } from "@/store/dashboardStore"
 import { JobStatus, Match } from "@/types"
 import { JOB_MAX_AGE_DAYS } from "@/lib/plans"
+import { effectiveStatus } from "@/lib/status"
 
 // Select every job column the UI touches — avoids `*` payload bloat
 // (job.description alone can be several KB per row).
@@ -44,7 +45,8 @@ export function useJobs() {
       //  - tracked applications (applied/interview/offer/rejected) at any age, so a job the
       //    user applied to never disappears from their pipeline or the dashboard counts.
       const cutoff = new Date(Date.now() - JOB_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
-      const [openRes, trackedRes, skippedRes] = await Promise.all([
+      const [profileRes, openRes, trackedRes, skippedRes] = await Promise.all([
+        supabase.from("profiles").select("match_threshold").eq("user_id", user.id).single(),
         supabase
           .from("matches")
           .select(`*, job:jobs!inner(${JOB_COLUMNS})`)
@@ -74,7 +76,10 @@ export function useJobs() {
       if (trackedRes.error) throw trackedRes.error
       if (skippedRes.error) throw skippedRes.error
 
-      setMatches([...(openRes.data || []), ...(trackedRes.data || []), ...(skippedRes.data || [])])
+      // Re-sort matched vs below threshold by the current threshold (see effectiveStatus).
+      const threshold = profileRes.data?.match_threshold ?? 70
+      const rows: Match[] = [...(openRes.data || []), ...(trackedRes.data || []), ...(skippedRes.data || [])]
+      setMatches(rows.map((m) => ({ ...m, status: effectiveStatus(m.status, m.match_score, threshold) })))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load jobs data.")
     } finally {
