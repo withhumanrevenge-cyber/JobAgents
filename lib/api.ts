@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client"
 
-// The Python backend (backend/). Empty means same origin, e.g. behind a rewrite.
+// The Python backend (backend/). Empty means same origin: on Vercel, vercel.json routes /api/* to
+// the Python service. Local dev points this at the uvicorn server.
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "")
 
 // Calls the backend as the signed-in user: it reads the Supabase access token from the

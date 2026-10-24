@@ -2,12 +2,17 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development"
 
-// The Python backend the browser calls directly (lib/api.ts).
+// On Vercel the Python backend is a service on the same domain (vercel.json routes /api/* to it),
+// so NEXT_PUBLIC_API_URL stays unset there. Local dev sets it to the uvicorn server.
 const apiOrigin = process.env.NEXT_PUBLIC_API_URL ? new URL(process.env.NEXT_PUBLIC_API_URL).origin : ""
 
+// script-src needs 'unsafe-inline': Next.js streams each page's data to the browser in inline
+// <script> tags, and without them React never starts (the page renders blank). Scripts from
+// other hosts stay limited to the payment providers. A per-request nonce would avoid
+// 'unsafe-inline', but it forces every page to render dynamically.
 const csp = `
   default-src 'self';
-  script-src 'self' ${isDev ? "'unsafe-eval' 'unsafe-inline'" : ""} https://checkout.razorpay.com https://js.stripe.com;
+  script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""} https://checkout.razorpay.com https://js.stripe.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com data:;
   img-src 'self' data: https: blob:;

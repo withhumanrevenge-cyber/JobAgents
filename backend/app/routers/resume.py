@@ -17,7 +17,8 @@ from app.services.llm import parse_json
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/resume", tags=["resume"])
 
-MAX_BYTES = 10 * 1024 * 1024
+# Vercel Functions reject request bodies over 4.5 MB, so stay under it with room for the form.
+MAX_BYTES = 4 * 1024 * 1024
 SIGNED_URL_TTL_S = 300
 
 SYSTEM_PROMPT = """You are an expert resume parser. Extract all relevant information from the resume text below.
@@ -47,7 +48,7 @@ def _extract_text(data: bytes) -> str:
 async def parse_resume(resume: UploadFile = File(...), user: AuthUser = Depends(ai_user)) -> dict:
     data = await resume.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
-        raise ApiError(400, "Resume must be under 10MB.")
+        raise ApiError(400, "Resume must be under 4 MB.")
     if resume.content_type != "application/pdf" or not data.startswith(b"%PDF"):
         raise ApiError(400, "Only PDF resumes are supported.")
 

@@ -43,6 +43,7 @@ async def security_headers(request: Request, call_next) -> Response:  # type: ig
 
 
 @app.get("/health")
+@app.get("/api/health")  # on Vercel only /api/* reaches the backend
 async def health() -> dict:
     return {"status": "ok"}
 

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.auth import AuthUser
@@ -54,6 +55,8 @@ async def digest(body: DigestBody | None = None, user: AuthUser = Depends(email_
 
 
 _sync_task: asyncio.Task | None = None
+# Leaves room inside Vercel's 300 s function limit for the follow-up emails and the response.
+VERCEL_SYNC_BUDGET_S = 220
 
 
 @router.api_route("/cron/sync", methods=["GET", "POST"], status_code=202, include_in_schema=False)
@@ -63,6 +66,12 @@ async def cron_sync(request: Request) -> dict:
         raise ApiError(503, "Cron is not configured.")
     if not hmac.compare_digest(request.headers.get("authorization", ""), f"Bearer {secret}"):
         raise ApiError(401, "Unauthorized")
+
+    if get_settings().on_vercel:
+        # Serverless: nothing runs after the response is sent, and the function ends at 300 s.
+        # Sync inside the request, stopping in time. Users are matched least recently matched
+        # first, so whoever doesn't fit today goes first tomorrow.
+        return JSONResponse({"started": True, **await run_daily_sync(time_budget_s=VERCEL_SYNC_BUDGET_S)}, status_code=200)
 
     global _sync_task
     if _sync_task and not _sync_task.done():

@@ -84,12 +84,16 @@ class AIContext:
 
 
 _hosted_slots: asyncio.Semaphore | None = None
+_hosted_slots_loop: asyncio.AbstractEventLoop | None = None
 
 
 def _slots() -> asyncio.Semaphore:
-    global _hosted_slots
-    if _hosted_slots is None:
+    # Per event loop: a semaphore used on one loop can't be awaited on another (see db.get_db).
+    global _hosted_slots, _hosted_slots_loop
+    loop = asyncio.get_running_loop()
+    if _hosted_slots is None or _hosted_slots_loop is not loop:
         _hosted_slots = asyncio.Semaphore(max(1, get_settings().HOSTED_MAX_CONCURRENCY))
+        _hosted_slots_loop = loop
     return _hosted_slots
 
 

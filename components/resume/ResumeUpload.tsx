@@ -22,7 +22,7 @@ export function ResumeUpload({ onParsed, compact = false, existingResumeUrl }: R
 
   const processFile = async (file: File) => {
     if (file.type !== "application/pdf") { setError("Only PDF files are supported."); return }
-    if (file.size > 10 * 1024 * 1024)   { setError("File must be under 10MB."); return }
+    if (file.size > 4 * 1024 * 1024)    { setError("File must be under 4 MB."); return }
 
     setUploading(true); setError(null); setParsed(null)
     const formData = new FormData()
@@ -103,7 +103,7 @@ export function ResumeUpload({ onParsed, compact = false, existingResumeUrl }: R
             </div>
             <div className="text-center">
               <p className="text-sm text-foreground/90">Drop your resume or <span className="text-foreground underline underline-offset-2">browse</span></p>
-              <p className="text-xs text-muted-foreground mt-0.5">PDF only · Max 10MB</p>
+              <p className="text-xs text-muted-foreground mt-0.5">PDF only · Max 4 MB</p>
             </div>
           </>
         )}

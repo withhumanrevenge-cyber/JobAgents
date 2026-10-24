@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Callable
 from typing import Any
 
@@ -6,16 +7,21 @@ from supabase import AsyncClient, acreate_client
 from app.config import get_settings
 
 _client: AsyncClient | None = None
+# The event loop the client was created on. On Vercel a function instance may run requests on a
+# fresh loop; a client bound to a closed loop would fail, so it's rebuilt for the new one.
+_client_loop: asyncio.AbstractEventLoop | None = None
 
 
 async def get_db() -> AsyncClient:
     """The service-role client. It bypasses RLS, so every query on user data must filter by
     the authenticated user's id explicitly. Never sign in with it: a sign-in would swap its
     service key for that user's token for every request in the process."""
-    global _client
-    if _client is None:
+    global _client, _client_loop
+    loop = asyncio.get_running_loop()
+    if _client is None or _client_loop is not loop:
         s = get_settings()
         _client = await acreate_client(s.SUPABASE_URL, s.SUPABASE_SERVICE_ROLE_KEY)
+        _client_loop = loop
     return _client
 
 

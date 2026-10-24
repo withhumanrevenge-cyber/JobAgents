@@ -95,20 +95,33 @@ AI keys in `user_ai_keys` (011), Proof of Fit in `skill_proofs` and `candidate_m
 reads the admin funnel from `admin_funnel()` (013), and groups duplicate postings by `jobs.dedupe_key` (014). 012 also makes `candidate_matches` read-only
 from the browser.
 
-## Deploying (Render)
+## Deploying (Vercel)
 
-`render.yaml` at the repo root defines the web service and the daily cron job, sharing one
-env group. Render → New → Blueprint → this repo, then fill in the secrets it asks for.
+The frontend and this backend deploy together as one Vercel project using
+[Services](https://vercel.com/docs/services) (see `vercel.json` at the repo root): `/api/auth/*`
+goes to Next.js (the Google sign-in callback), every other `/api/*` to this FastAPI app, and
+everything else to Next.js. Same domain, so the browser needs no API URL and there's no CORS.
 
-After the first deploy:
+One-time setup in Vercel:
 
-1. Vercel: set `NEXT_PUBLIC_API_URL` to the Render service URL (or a custom domain such as
-   `https://api.getjobagents.xyz`), remove the server-only secrets, and redeploy.
-2. Razorpay and Lemon Squeezy dashboards: point the webhooks at
-   `<api url>/api/webhooks/razorpay` and `<api url>/api/webhooks/lemonsqueezy`.
-3. Clean up job descriptions stored as escaped HTML (dry run first):
-   `python -m app.jobs.backfill_descriptions`, then with `--apply`. On Render, run it from the
-   web service's Shell tab.
+1. Project → Settings → General → Framework Preset: **Services** (Root Directory: the repo root).
+2. Project → Settings → Environment Variables: add everything from `backend/.env.example` (with
+   `APP_URL=https://getjobagents.xyz`, `ENVIRONMENT=production`), next to the `NEXT_PUBLIC_*`
+   ones. Leave `NEXT_PUBLIC_API_URL` unset.
+3. Payment dashboards: webhooks go to `https://getjobagents.xyz/api/webhooks/razorpay` and
+   `/api/webhooks/lemonsqueezy`.
 
-Run a single uvicorn process (the Dockerfile does). Rate limits and the "sync already running"
-guard live in process memory.
+Vercel limits that shaped the code:
+
+- Functions end after 300 s. The daily sync (Vercel Cron, `/api/cron/sync`, sends
+  `Authorization: Bearer $CRON_SECRET`) runs inside the request with a 220 s budget, least
+  recently matched users first, so users that don't fit get matched first the next day.
+- Request bodies are capped at 4.5 MB, so resumes are limited to 4 MB.
+- Nothing stays in memory between instances: rate limits and the per-user/per-proof locks are
+  per instance. Good enough at this size; move them to Redis or the database if abuse shows up.
+
+`render.yaml` and the `Dockerfile` still work for running the backend as a long-lived server
+elsewhere; then set `NEXT_PUBLIC_API_URL` on Vercel to that server's URL.
+
+One-off cleanup of job descriptions stored as escaped HTML (dry run, then `--apply`), from your
+machine with `backend/.env` filled in: `python -m app.jobs.backfill_descriptions`.

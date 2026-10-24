@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic import field_validator
@@ -80,6 +81,11 @@ class Settings(BaseSettings):
     @classmethod
     def _strip_slash(cls, v: str) -> str:
         return v.rstrip("/")
+
+    @property
+    def on_vercel(self) -> bool:
+        # Set by Vercel on every build and function. Functions there end after 300 s.
+        return os.environ.get("VERCEL") == "1"
 
     @property
     def is_production(self) -> bool:
