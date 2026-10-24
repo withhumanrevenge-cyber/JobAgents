@@ -11,7 +11,11 @@ import { useDashboardStore } from "@/store/dashboardStore"
 import { Loader2, LayoutGrid, List, Lock } from "lucide-react"
 import { Stagger } from "@/components/motion/Stagger"
 import { TIME_THRESHOLD_MS } from "@/lib/status"
-import { PLAN_CONFIG, effectivePlan } from "@/lib/plans"
+import { PLAN_CONFIG, JOB_MAX_AGE_DAYS, effectivePlan } from "@/lib/plans"
+import type { Match } from "@/types"
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const postedAt = (m: Match) => (m.job?.posted_date ? new Date(m.job.posted_date).getTime() : 0)
 
 export default function JobsPage() {
   const { allJobRows, loading } = useJobs()
@@ -19,18 +23,22 @@ export default function JobsPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid">("table")
   const { searchQuery, statusFilter, sourceFilter, jobTypeFilter, countryFilter, regionFilter, experienceFilter, timeFilter } = useDashboardStore()
 
+  // Fixed when the page opens, so filtering doesn't read the clock on every render.
+  const [openedAt] = useState(() => Date.now())
   const cutoffMs = TIME_THRESHOLD_MS[timeFilter]
-  const cutoff = Number.isFinite(cutoffMs) ? Date.now() - cutoffMs : Number.NEGATIVE_INFINITY
+  const cutoff = Number.isFinite(cutoffMs) ? openedAt - cutoffMs : Number.NEGATIVE_INFINITY
 
   const filteredMatches = allJobRows
     .filter((match) => {
       const job = match.job
       if (!job) return false
-      const q = `${job.title} ${job.company} ${job.tags.join(" ")}`.toLowerCase()
+      const q = `${job.title} ${job.company} ${(job.tags ?? []).join(" ")}`.toLowerCase()
       const postedAfter = !Number.isFinite(cutoffMs)
         || (job.posted_date ? new Date(job.posted_date).getTime() >= cutoff : true)
       return (searchQuery === "" || q.includes(searchQuery.toLowerCase()))
-        && (statusFilter === "all" ? match.status !== "skipped" : match.status === statusFilter)
+        && (statusFilter === "all" || match.status === statusFilter
+          // Newest: only jobs inside the freshness window, even ones the user applied to long ago.
+          || (statusFilter === "newest" && postedAt(match) >= openedAt - JOB_MAX_AGE_DAYS * DAY_MS))
         && (sourceFilter === "all" || job.source === sourceFilter)
         && (jobTypeFilter === "all" || job.job_type === jobTypeFilter)
         && (countryFilter === "all" || job.country === countryFilter)
@@ -38,7 +46,9 @@ export default function JobsPage() {
         && (experienceFilter === "all" || job.experience_level === experienceFilter)
         && postedAfter
     })
-    .sort((a, b) => b.match_score - a.match_score)
+    .sort(statusFilter === "newest"
+      ? (a, b) => postedAt(b) - postedAt(a)
+      : (a, b) => b.match_score - a.match_score)
 
   const plan = effectivePlan(profile ?? {})
   const cap = PLAN_CONFIG[plan].maxVisibleMatches
@@ -95,7 +105,7 @@ export default function JobsPage() {
         <div className="text-center py-14">
           <p className="text-sm text-muted-foreground">No jobs found</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto leading-relaxed">
-            Try <span className="font-medium text-foreground/80">Find new jobs</span>, clear your filters, or lower your match threshold in Settings. Jobs scoring below your threshold are under the <span className="font-medium text-foreground/80">Below threshold</span> status filter.
+            Try <span className="font-medium text-foreground/80">Find new jobs</span> or clear your filters.
           </p>
         </div>
       ) : viewMode === "table" ? (

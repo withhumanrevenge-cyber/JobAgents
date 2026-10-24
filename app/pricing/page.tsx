@@ -29,18 +29,18 @@ export default async function PricingPage() {
           {PRICING_TIERS.map((plan) => (
             <div key={plan.name}
               className={`rounded-lg border p-6 sm:p-7 flex flex-col ${plan.featured ? "border-foreground bg-primary" : "border-border bg-card"}`}>
-              <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${plan.featured ? "text-muted-foreground" : "text-muted-foreground"}`}>{plan.name}</p>
+              <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${plan.featured ? "text-primary-foreground opacity-70" : "text-muted-foreground"}`}>{plan.name}</p>
               <div className="flex items-end gap-1 mb-1">
-                <span className={`text-4xl font-bold ${plan.featured ? "text-white" : "text-foreground"}`}>{plan.priceLabel}</span>
-                <span className="text-sm mb-1.5 text-muted-foreground">/{plan.period}</span>
+                <span className={`text-4xl font-bold ${plan.featured ? "text-primary-foreground" : "text-foreground"}`}>{plan.priceLabel}</span>
+                <span className={`text-sm mb-1.5 ${plan.featured ? "text-primary-foreground opacity-70" : "text-muted-foreground"}`}>/{plan.period}</span>
               </div>
-              <p className={`text-sm mb-6 ${plan.featured ? "text-muted-foreground" : "text-muted-foreground"}`}>{plan.description}</p>
+              <p className={`text-sm mb-6 ${plan.featured ? "text-primary-foreground opacity-70" : "text-muted-foreground"}`}>{plan.description}</p>
 
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5">
-                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.featured ? "text-white" : "text-muted-foreground"}`} />
-                    <span className={`text-sm ${plan.featured ? "text-muted-foreground/60" : "text-foreground/80"}`}>{f}</span>
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${plan.featured ? "text-primary-foreground" : "text-muted-foreground"}`} />
+                    <span className={`text-sm ${plan.featured ? "text-primary-foreground opacity-85" : "text-foreground/80"}`}>{f}</span>
                   </li>
                 ))}
               </ul>
@@ -64,7 +64,9 @@ export default async function PricingPage() {
           <p className="text-sm font-medium text-foreground/90">Frequently asked questions</p>
           {[
             { q: "How does job matching work?", a: "We parse your resume to extract skills and experience, then score each job 0–100 based on how well it matches your background." },
-            { q: "Does JobAgent submit applications for me?", a: "No. We match jobs to your resume and prep the materials (tailored resume + cover letter), but you submit on the original site. The optional auto-mark setting only updates your tracker — it does not contact any employer." },
+            { q: "What does “bring your own AI key” mean?", a: "JobAgent's AI features run on an AI provider such as Groq, Google Gemini, OpenAI, Anthropic (Claude) or OpenRouter. On Free, you create a key with one of them and paste it in Settings. Groq and Gemini give free keys that are enough for a normal job search. Any usage cost is between you and your provider; JobAgent charges nothing." },
+            { q: "Is my AI key safe?", a: "We check the key with the provider, then store it encrypted. It's used only to run your own requests, it's never shown again after you save it, and you can remove it any time. You can also set a spending limit in your provider's dashboard." },
+            { q: "Does JobAgent submit applications for me?", a: "No. We match jobs to your resume and prep the materials (tailored resume + cover letter), but you submit on the original site, so your accounts on job sites are never at risk." },
             { q: "Is my data stored securely?", a: "Yes. Your resume and profile data are stored securely via Supabase. We never sell your data." },
             { q: "Can I cancel anytime?", a: "Yes. No contracts or lock-ins. Downgrade to Free at any time." },
           ].map((item) => (

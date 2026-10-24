@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { useEffect } from "react"
 import { AlertTriangle } from "lucide-react"
 
@@ -21,9 +23,9 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
             className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-md hover:opacity-90 transition-colors">
             Try again
           </button>
-          <a href="/" className="border border-border text-sm text-foreground/90 px-4 py-2 rounded-md hover:border-foreground/40 transition-colors">
+          <Link href="/" className="border border-border text-sm text-foreground/90 px-4 py-2 rounded-md hover:border-foreground/40 transition-colors">
             Go home
-          </a>
+          </Link>
         </div>
         {error.digest && <p className="mt-4 text-[10px] text-muted-foreground font-mono">Error ID: {error.digest}</p>}
       </div>

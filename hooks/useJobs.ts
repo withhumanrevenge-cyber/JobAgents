@@ -1,15 +1,45 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useDashboardStore } from "@/store/dashboardStore"
-import { Match } from "@/types"
+import { JobStatus, Match } from "@/types"
+import { JOB_MAX_AGE_DAYS } from "@/lib/plans"
+import { effectiveStatus } from "@/lib/status"
 
 // Select every job column the UI touches — avoids `*` payload bloat
 // (job.description alone can be several KB per row).
-const JOB_COLUMNS = "id, title, company, location, country, region, remote, job_type, experience_level, url, description, salary_range, tags, posted_date, source, source_id, created_at"
+const JOB_COLUMNS = "id, title, company, location, country, region, remote, job_type, experience_level, url, description, salary_range, tags, posted_date, source, source_id, created_at, dedupe_key"
 
-// Cap each half so we never hit Supabase's 1000-row default.
+// Cap each query so we never hit Supabase's 1000-row default.
 const ACTIVE_LIMIT = 500
+const TRACKED_LIMIT = 500
 const SKIPPED_LIMIT = 500
+
+const OPEN_STATUSES: JobStatus[] = ["pending", "reviewed"]
+const TRACKED_STATUSES: JobStatus[] = ["applied", "interview", "offer", "rejected"]
+
+const TRACKED = new Set<JobStatus>(TRACKED_STATUSES)
+const postedTime = (m: Match) => (m.job?.posted_date ? new Date(m.job.posted_date).getTime() : 0)
+
+// Which of two matches for the same role to show: the one the user is tracking (applied,
+// interview...), then the higher score, then the newer posting.
+function preferred(a: Match, b: Match): Match {
+  const ta = TRACKED.has(a.status), tb = TRACKED.has(b.status)
+  if (ta !== tb) return ta ? a : b
+  if (a.match_score !== b.match_score) return a.match_score > b.match_score ? a : b
+  return postedTime(a) >= postedTime(b) ? a : b
+}
+
+// The same role posted several times (other cities, recruiters, boards) shows once. Its other
+// postings are listed with their links on the job page.
+function oneRowPerJob(rows: Match[]): Match[] {
+  const byRole = new Map<string, Match>()
+  for (const m of rows) {
+    const key = m.job?.dedupe_key || m.job_id
+    const current = byRole.get(key)
+    byRole.set(key, current ? preferred(current, m) : m)
+  }
+  return [...byRole.values()]
+}
 
 export function useJobs() {
   const supabase = useMemo(() => createClient(), [])
@@ -32,30 +62,48 @@ export function useJobs() {
         return
       }
 
-      // Fetch non-skipped (reviewed/pending/applied/interview/offer/rejected) and
-      // skipped in parallel with independent caps, so a big pile of skipped rows
-      // never squeezes out actual matches through the 1000-row default limit.
-      const [activeRes, skippedRes] = await Promise.all([
+      // Three queries with independent caps, so a big pile of skipped rows never squeezes out
+      // actual matches through the 1000-row default limit:
+      //  - open matches (pending/reviewed) and skipped ones, only for jobs posted within
+      //    JOB_MAX_AGE_DAYS: older roles have usually closed;
+      //  - tracked applications (applied/interview/offer/rejected) at any age, so a job the
+      //    user applied to never disappears from their pipeline or the dashboard counts.
+      const cutoff = new Date(Date.now() - JOB_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+      const [profileRes, openRes, trackedRes, skippedRes] = await Promise.all([
+        supabase.from("profiles").select("match_threshold").eq("user_id", user.id).single(),
         supabase
           .from("matches")
-          .select(`*, job:jobs(${JOB_COLUMNS})`)
+          .select(`*, job:jobs!inner(${JOB_COLUMNS})`)
           .eq("user_id", user.id)
-          .neq("status", "skipped")
+          .in("status", OPEN_STATUSES)
+          .gte("job.posted_date", cutoff)
           .order("match_score", { ascending: false })
           .limit(ACTIVE_LIMIT),
         supabase
           .from("matches")
           .select(`*, job:jobs(${JOB_COLUMNS})`)
           .eq("user_id", user.id)
+          .in("status", TRACKED_STATUSES)
+          .order("match_score", { ascending: false })
+          .limit(TRACKED_LIMIT),
+        supabase
+          .from("matches")
+          .select(`*, job:jobs!inner(${JOB_COLUMNS})`)
+          .eq("user_id", user.id)
           .eq("status", "skipped")
+          .gte("job.posted_date", cutoff)
           .order("match_score", { ascending: false })
           .limit(SKIPPED_LIMIT),
       ])
 
-      if (activeRes.error) throw activeRes.error
+      if (openRes.error) throw openRes.error
+      if (trackedRes.error) throw trackedRes.error
       if (skippedRes.error) throw skippedRes.error
 
-      setMatches([...(activeRes.data || []), ...(skippedRes.data || [])])
+      // Re-sort matched vs below threshold by the current threshold (see effectiveStatus).
+      const threshold = profileRes.data?.match_threshold ?? 70
+      const rows: Match[] = [...(openRes.data || []), ...(trackedRes.data || []), ...(skippedRes.data || [])]
+      setMatches(oneRowPerJob(rows.map((m) => ({ ...m, status: effectiveStatus(m.status, m.match_score, threshold) }))))
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load jobs data.")
     } finally {
@@ -64,7 +112,7 @@ export function useJobs() {
   }, [supabase])
 
   useEffect(() => {
-    fetchJobsAndMatches(true)
+    void Promise.resolve().then(() => fetchJobsAndMatches(true))
   }, [fetchJobsAndMatches])
 
   useEffect(() => {

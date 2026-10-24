@@ -9,11 +9,13 @@ import { ResumeUpload } from "@/components/resume/ResumeUpload"
 import { TagInput } from "@/components/ui/TagInput"
 import { BillingPanel } from "@/components/billing/BillingPanel"
 import { AccountTypeCard } from "@/components/settings/AccountTypeCard"
+import { AIProviderCard } from "@/components/settings/AIProviderCard"
 import { openStoredResume } from "@/lib/resume"
 import { ParsedResume } from "@/types"
 import { Reveal } from "@/components/motion/Reveal"
 import { spring } from "@/lib/motion"
 import { COUNTRIES, DEFAULT_COUNTRY } from "@/lib/countries"
+import { apiFetch } from "@/lib/api"
 
 export default function SettingsPage() {
   const { profile, loading, saving, updateProfile } = useProfile()
@@ -43,7 +45,7 @@ export default function SettingsPage() {
         setLinkedinUrl(profile.linkedin_url || "")
         setTargetRoles(Array.isArray(profile.target_roles) ? profile.target_roles : [])
         setTargetCountry(profile.target_country || DEFAULT_COUNTRY)
-        setMatchThreshold(profile.match_threshold || 70)
+        setMatchThreshold(profile.match_threshold ?? 70)
         setEmailNotifications(profile.email_notifications ?? true)
         setOpenToWork(profile.open_to_work ?? false)
         setResumeUrl(profile.base_resume_url || null)
@@ -63,7 +65,7 @@ export default function SettingsPage() {
     if (!email) { setFeedback({ type: "error", message: "Add an email address and save first." }); return }
     setSendingTest(true); setFeedback(null)
     try {
-      const res = await fetch("/api/notifications/digest", {
+      const res = await apiFetch("/api/notifications/digest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: "test" }),
@@ -94,7 +96,7 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-6">
       <Reveal>
         <h1 className="text-lg font-semibold text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Profile, resume, and matching preferences.</p>
+        <p className="text-sm text-muted-foreground mt-0.5">AI provider, profile, resume, and matching preferences.</p>
       </Reveal>
 
       <AnimatePresence>
@@ -115,6 +117,8 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="md:col-span-2 space-y-5">
+          <AIProviderCard />
+
           <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-5 space-y-4">
             <p className="text-sm font-medium text-foreground">Profile</p>
 
@@ -159,7 +163,7 @@ export default function SettingsPage() {
               <select value={targetCountry} onChange={e => setTargetCountry(e.target.value)} className={inputCls}>
                 {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
               </select>
-              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">Adzuna is searched in this country. Direct ATS listings (Greenhouse, Lever, Ashby) are global and always included.</p>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">Jobs in this country (and remote roles open worldwide) are scored for you. Adzuna is searched here, and company career pages are always included.</p>
             </div>
 
             <div>
@@ -243,7 +247,7 @@ export default function SettingsPage() {
                   <Check className="w-3 h-3" /> Resume parsed
                   {parsedAt && <span className="text-[10px] font-normal text-green-600">· {calculateDaysAgo(parsedAt).toLowerCase()}</span>}
                 </p>
-                <p className="text-[10px] text-green-600">{parsedResume.target_role} · {parsedResume.years_experience}y · {parsedResume.skills.length} skills</p>
+                <p className="text-[10px] text-green-600">{parsedResume.target_role} · {parsedResume.years_experience}y · {parsedResume.skills?.length ?? 0} skills</p>
                 {resumeUrl && (
                   <button type="button" onClick={() => openStoredResume()}
                     className="text-[10px] text-muted-foreground hover:text-foreground">

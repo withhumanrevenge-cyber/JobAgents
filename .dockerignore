@@ -1,0 +1,13 @@
+.git
+.gitignore
+.next
+node_modules
+coverage
+*.log
+.env*
+!.env.example
+backend/*
+!backend/app/
+backend/app/*
+!backend/app/plans.json
+docs/screenshots

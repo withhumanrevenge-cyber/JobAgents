@@ -55,7 +55,7 @@ function renderCardBody(match: Match, job: NonNullable<Match["job"]>) {
       </div>
 
       <div className="flex flex-wrap gap-1 mb-4">
-        {job.tags.slice(0, 3).map((tag, i) => (
+        {(job.tags ?? []).slice(0, 3).map((tag, i) => (
           <span key={i} className="bg-muted border border-border text-[10px] text-muted-foreground px-2 py-0.5 rounded">{tag}</span>
         ))}
       </div>

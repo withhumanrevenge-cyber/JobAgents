@@ -44,6 +44,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/pricing') ||
     path.startsWith('/privacy') ||
     path.startsWith('/terms') ||
+    path.startsWith('/p/') ||
     path.startsWith('/forgot-password') ||
     path.startsWith('/reset-password') ||
     path === '/robots.txt' ||

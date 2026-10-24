@@ -36,7 +36,9 @@ create table if not exists candidate_matches (
 );
 
 create index if not exists idx_job_postings_recruiter on job_postings(recruiter_id);
-create index if not exists idx_candidate_matches_posting on candidate_matches(posting_id);
+-- candidate_matches(posting_id) is covered by unique(posting_id, candidate_id).
+-- candidate_id is a FK with on delete cascade, so it needs its own index.
+create index if not exists idx_candidate_matches_candidate on candidate_matches(candidate_id);
 
 alter table job_postings enable row level security;
 alter table candidate_matches enable row level security;

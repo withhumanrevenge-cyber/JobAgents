@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useRef, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useJobs } from "@/hooks/useJobs"
 import { useProfile } from "@/hooks/useProfile"
@@ -12,6 +12,11 @@ import { Loader2, ArrowRight, FileText, RefreshCw, Sparkles } from "lucide-react
 import Link from "next/link"
 import { Reveal } from "@/components/motion/Reveal"
 import { Stagger, StaggerItem } from "@/components/motion/Stagger"
+import { apiFetch } from "@/lib/api"
+import { scoreNewJobs } from "@/lib/scoreJobs"
+import { useAISettings } from "@/hooks/useAISettings"
+import { PLAN_CONFIG } from "@/lib/plans"
+import { KeyRound } from "lucide-react"
 
 export default function DashboardPage() {
   return (
@@ -30,14 +35,17 @@ function DashboardHome() {
   const [stats, setStats] = useState({ totalJobs: 0, matches: 0, applicationsSent: 0, interviews: 0 })
   const [inlineSyncing, setInlineSyncing] = useState(false)
   const [inlineSyncError, setInlineSyncError] = useState<string | null>(null)
+  const { settings: ai } = useAISettings()
+  const autoRan = useRef(false)
 
   useEffect(() => {
     if (matches.length > 0 || allJobRows.length > 0) {
-      const inFeed = (m: (typeof matches)[number]) => m.status !== "skipped"
+      // Every job scored against the user's resume, matched or below their threshold.
+      const scored = (m: (typeof matches)[number]) => m.match_score >= 0
       Promise.resolve().then(() =>
         setStats({
-          totalJobs:        allJobRows.filter(inFeed).length,
-          matches:          matches.filter((m) => (m.status === "reviewed" || m.status === "pending") && inFeed(m)).length,
+          totalJobs:        allJobRows.filter(scored).length,
+          matches:          matches.filter((m) => m.status === "reviewed").length,
           applicationsSent: matches.filter((m) => m.status === "applied").length,
           interviews:       matches.filter((m) => m.status === "interview").length,
         })
@@ -52,39 +60,27 @@ function DashboardHome() {
     setInlineSyncing(true)
     setInlineSyncError(null)
     try {
-      const fetchRes = await fetch("/api/jobs/fetch", { method: "POST" })
+      const fetchRes = await apiFetch("/api/jobs/fetch", { method: "POST" })
       if (!fetchRes.ok) {
         const d = await fetchRes.json().catch(() => ({}))
         throw new Error(d.error || "Failed to fetch jobs.")
       }
-      let consecutiveFailures = 0
-      for (let i = 0; i < 40; i++) {
-        let matchRes: Response
-        let d: { remaining?: number; error?: string }
-        try {
-          matchRes = await fetch("/api/match", { method: "POST" })
-          d = await matchRes.json()
-        } catch {
-          consecutiveFailures++
-          if (consecutiveFailures >= 3) break
-          continue
-        }
-        if (!matchRes.ok) {
-          if (matchRes.status === 400) throw new Error(d?.error || "Scoring failed.")
-          consecutiveFailures++
-          if (consecutiveFailures >= 3) break
-          continue
-        }
-        consecutiveFailures = 0
-        triggerRefresh()
-        if (Number(d.remaining ?? 0) <= 0) break
-      }
+      const run = await scoreNewJobs(() => triggerRefresh())
+      if (run.limited) setInlineSyncError("Free trial limit reached for now. Add your own AI key in Settings to score more jobs.")
     } catch (err: unknown) {
       setInlineSyncError(err instanceof Error ? err.message : "Job search failed.")
     } finally {
       setInlineSyncing(false)
     }
   }
+
+  // Straight after onboarding, run the first search here (with progress) rather than asking the
+  // user to refresh and hope background work has finished.
+  useEffect(() => {
+    if (!justOnboarded || autoRan.current || isLoading || !profile?.parsed_resume || matches.length > 0) return
+    autoRan.current = true
+    runInlineSync()
+  }, [justOnboarded, isLoading, profile, matches.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
@@ -94,7 +90,7 @@ function DashboardHome() {
     )
   }
 
-  const threshold = profile?.match_threshold || 70
+  const threshold = profile?.match_threshold ?? 70
   const topMatches = [...matches]
     .filter((m) => m.match_score >= threshold && m.status !== "skipped" && m.job)
     .sort((a, b) => b.match_score - a.match_score)
@@ -120,9 +116,22 @@ function DashboardHome() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
           <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900">Welcome aboard — searching for your first matches</p>
-            <p className="text-xs text-blue-700 mt-0.5">Jobs are being fetched and scored against your resume right now. Refresh in 30-60 seconds.</p>
+            <p className="text-sm font-medium text-blue-900">Welcome aboard. Finding your first matches</p>
+            <p className="text-xs text-blue-700 mt-0.5">{inlineSyncing ? "Fetching jobs and scoring them against your resume. This takes about a minute; matches appear below as they're scored." : "Use “Find jobs now” below if nothing has appeared yet."}</p>
           </div>
+        </div>
+      )}
+
+      {!needsResume && ai?.mode === "trial" && (
+        <div className="bg-card border border-border rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <KeyRound className="w-4 h-4 text-foreground/70 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Use JobAgent free, without limits</p>
+            <p className="text-xs text-muted-foreground mt-0.5">You&apos;re on the trial: {PLAN_CONFIG.free.credits} AI credits a month and {PLAN_CONFIG.free.trialMatchPerRun} jobs scored per search. Add your own AI key (Groq and Gemini keys are free) and everything is unlimited.</p>
+          </div>
+          <Link href="/settings#ai" className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1.5 rounded-md hover:opacity-90 transition-colors shrink-0">
+            Add AI key
+          </Link>
         </div>
       )}
 

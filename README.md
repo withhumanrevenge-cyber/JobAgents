@@ -11,6 +11,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-38BDF8?logo=tailwindcss&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres-3FCF8E?logo=supabase&logoColor=white)
+![Python](https://img.shields.io/badge/Python-FastAPI-009688?logo=fastapi&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-LLaMA_3-F55036?logo=meta&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000?logo=vercel&logoColor=white)
 
@@ -53,7 +54,7 @@ Built as a production-grade, full-stack SaaS: authentication, a credit-metered b
 - **Interview prep** — Role- and company-specific questions (technical, behavioral, situational) with coaching tips.
 - **Application tracker** — A pipeline from matched → applied → interview → offer, with notes.
 - **Email digests** — A daily summary of fresh high-fit matches, delivered via Resend.
-- **Credit-based plans** — Free, Pro, and Premium tiers with usage metering; **region-aware pricing** detected at the edge.
+- **Bring your own AI key** — Free runs on the user's own Groq, Gemini, OpenAI, Claude or OpenRouter key (encrypted at rest); Pro and Premium add hosted AI on monthly credits, with **region-aware pricing** detected at the edge.
 - **Hiring dashboard (two-sided)** — Recruiters post roles and get AI-ranked candidates from an opt-in talent pool, with fit scores, skill breakdowns, and a shortlist pipeline.
 - **Admin dashboard** — Users, estimated MRR, AI token usage, and manual plan controls.
 - **Auth** — Email/password and Google OAuth via Supabase, with row-level security on every table.
@@ -71,7 +72,7 @@ flowchart LR
     MA -->|"score 0–100"| FEED["Personalized Feed"]
     FEED --> SA["Tailored Resume + Cover Letter"]
     FEED --> IV["Interview Prep"]
-    CRON["Vercel Cron"] -.->|"daily sync + digests"| POOL
+    CRON["Render Cron"] -.->|"daily sync + digests"| POOL
 ```
 
 A few engineering decisions worth calling out:
@@ -81,7 +82,7 @@ A few engineering decisions worth calling out:
 - **Credit metering with atomic spend.** An append-only `usage_events` ledger plus a Postgres `consume_credits` function (advisory-locked) prevents double-spend under concurrent requests; paid actions auto-refund if the downstream work fails.
 - **Processor-agnostic billing.** Razorpay (UPI/INR) and Lemon Squeezy (global card/USD) both funnel through one entitlement layer, so the user's plan flips identically regardless of which webhook fires.
 - **Single source of truth for pricing.** Plan limits and prices live in one config; the marketing pages, in-app billing panel, and currency formatting all derive from it and can never drift.
-- **Secure background processing.** A secret-protected Vercel Cron job aggregates jobs, scores them, and sends digests on a schedule; the endpoint fails closed if its secret isn't configured.
+- **Python API, TypeScript UI.** A FastAPI backend owns every server-side action (AI calls, credits, billing webhooks, job sync); the Next.js app is the UI and calls it with the user's Supabase token. A daily cron job aggregates jobs, scores them, and sends digests.
 - **Production hardening.** Row-level security, HTTP security headers, `robots.txt` / `sitemap.xml` / dynamic OpenGraph image, and a fully responsive, accessible UI.
 
 ---
@@ -93,12 +94,12 @@ A few engineering decisions worth calling out:
 | **Framework** | Next.js 16 (App Router), React 19, TypeScript 5 |
 | **Styling / UI** | Tailwind CSS, Radix UI primitives, Framer Motion, Lucide icons |
 | **State / Validation** | Zustand, Zod |
-| **Backend** | Next.js Route Handlers, Supabase (PostgreSQL, Auth, Storage) |
-| **AI** | Groq SDK — GPT-OSS 20B (scoring) & 120B (generation) |
-| **Documents** | `unpdf` (PDF text extraction), `@react-pdf/renderer` (resume rendering) |
+| **Backend** | Python 3.12, FastAPI, Supabase (PostgreSQL, Auth, Storage) |
+| **AI** | Groq — GPT-OSS 20B (scoring) & 120B (generation) |
+| **Documents** | `pypdf` (PDF text extraction), `@react-pdf/renderer` (resume rendering) |
 | **Payments** | Razorpay + Lemon Squeezy (webhook-driven) |
 | **Email** | Resend (transactional digests) |
-| **Infra** | Vercel (hosting + Cron) |
+| **Infra** | Vercel (frontend), Render (API + cron) |
 
 ---
 
@@ -119,24 +120,42 @@ cp .env.example .env.local   # then fill in your keys
 #    Run supabase/schema.sql, then the files in supabase/migrations/,
 #    in your Supabase project's SQL editor.
 
-# 4. Run
+# 4. Run the API (see backend/README.md), then the frontend
 npm run dev                  # http://localhost:3000
 ```
 
 See [`.env.example`](.env.example) for the full list of environment variables.
+
+### Run with Docker
+
+Docker Compose starts the Next.js frontend on `http://localhost:3000` and the FastAPI backend on
+`http://localhost:8000`. The frontend's API URL is set at image build time, so it uses the
+browser-accessible backend URL.
+
+```bash
+# Copy `.env.example` to `.env` and fill in the public Supabase values, then copy
+# `backend/.env.example` to `backend/.env` and fill in the backend values.
+docker compose up --build
+```
+
+The public Supabase values are build arguments because Next.js embeds
+`NEXT_PUBLIC_*` values into the browser bundle. Rebuild after changing them.
+
+To stop the services, press `Ctrl+C` or run `docker compose down`. Do not put secrets in the
+Dockerfile or `docker-compose.yml`; `backend/.env` is ignored by Git and loaded only by Compose.
 
 ---
 
 ## Project Structure
 
 ```
-app/                  Routes — marketing, auth, dashboard, hiring, admin, API handlers
-  api/                Route handlers (jobs, match, resume, apply, hire, billing, webhooks, cron)
+app/                  Pages — marketing, auth, dashboard, hiring, admin (+ the OAuth callback)
+backend/              Python API: routes, AI agents, credits, billing webhooks, daily sync
 components/           UI: layout, jobs, billing, resume, legal
 lib/
-  agents/             AI agents (fetch, match, tailor, cover letter, interview, candidates)
-  billing/            Processor-agnostic checkout + entitlement
-  marketing/          Pricing source of truth + geo currency
+  api.ts              Calls the backend with the user's Supabase token
+  billing/            Checkout launcher (Razorpay / Lemon Squeezy)
+  marketing/          Pricing page tiers + geo currency
   supabase/           Server / client / middleware helpers
 store/                Zustand state
 supabase/             schema.sql + migrations
@@ -153,7 +172,9 @@ supabase/             schema.sql + migrations
 | `POST /api/match` | Score unscored jobs against the user's resume |
 | `POST /api/apply/smart` | Tailored resume + cover letter in one call |
 | `POST /api/interview/generate` | Role-specific interview questions |
-| `GET  /api/cron/sync` | Scheduled aggregation, scoring, and digests (secured) |
+| `POST /api/cron/sync` | Scheduled aggregation, scoring, and digests (secured) |
+
+All endpoints are served by the Python backend; see [`backend/README.md`](backend/README.md).
 
 ---
 
@@ -170,4 +191,3 @@ supabase/             schema.sql + migrations
 Designed and built end-to-end — frontend, backend, AI orchestration, billing, and infrastructure — by **[MONU]**.
 
 Feedback and opportunities welcome: **withhumanrevenge@gmail.com**
-

@@ -1,0 +1,11 @@
+{
+  "plans": {
+    "free":    { "label": "Free",    "credits": 6,   "matchPerRun": 150, "trialMatchPerRun": 25, "trialMatchPerDay": 50, "maxVisibleMatches": 500,  "proofsPerMonth": 3,   "allSources": true, "allCountries": true, "priceUsd": 0,  "priceInrPaise": 0 },
+    "pro":     { "label": "Pro",     "credits": 100, "matchPerRun": 150, "trialMatchPerRun": 0,  "trialMatchPerDay": 0,  "maxVisibleMatches": 1000, "proofsPerMonth": 15, "allSources": true, "allCountries": true, "priceUsd": 12, "priceInrPaise": 39900 },
+    "premium": { "label": "Premium", "credits": 300, "matchPerRun": 300, "trialMatchPerRun": 0,  "trialMatchPerDay": 0,  "maxVisibleMatches": 5000, "proofsPerMonth": 40, "allSources": true, "allCountries": true, "priceUsd": 24, "priceInrPaise": 79900 }
+  },
+  "jobMaxAgeDays": 30,
+  "creditCost": { "smart_apply": 3, "tailor": 2, "interview": 2 },
+  "actionLabel": { "smart_apply": "Smart Apply", "tailor": "Resume tailor", "interview": "Interview prep" },
+  "notes": "credits are hosted-AI credits (our key). With their own AI key, users spend none. trialMatch* apply to Free users without a key. proofsPerMonth: Proof of Fit runs always use our key so every candidate is graded by the same model; this caps them."
+}

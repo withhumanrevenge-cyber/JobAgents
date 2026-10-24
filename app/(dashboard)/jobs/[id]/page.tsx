@@ -8,16 +8,23 @@ import { createClient } from "@/lib/supabase/client"
 import { MatchScoreBadge } from "@/components/jobs/MatchScoreBadge"
 import { ConsentModal } from "@/components/ui/ConsentModal"
 import { CREDIT_COST } from "@/lib/plans"
-import { ResumeData, Match, InterviewQuestion } from "@/types"
-import { Loader2, Calendar, MapPin, DollarSign, ExternalLink, Briefcase, FileCheck, CheckCircle, MessageSquare, ChevronDown, Zap, Copy, X } from "lucide-react"
+import { useAISettings } from "@/hooks/useAISettings"
+import Link from "next/link"
+import { ResumeData, Match, InterviewQuestion, Job } from "@/types"
+import { SOURCE_LABEL } from "@/lib/status"
+import { Loader2, Calendar, MapPin, DollarSign, ExternalLink, Briefcase, FileCheck, CheckCircle, MessageSquare, ChevronDown, Zap, Copy, X, BadgeCheck } from "lucide-react"
 import { calculateDaysAgo } from "@/lib/utils"
 import { Reveal } from "@/components/motion/Reveal"
 import { spring } from "@/lib/motion"
+import { apiFetch } from "@/lib/api"
+import { startProof } from "@/lib/proofs"
 
 const ResumePreview = dynamic(
   () => import("@/components/resume/ResumePreview").then((mod) => mod.ResumePreview),
   { ssr: false, loading: () => <div className="flex items-center justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div> }
 )
+
+type OtherPosting = Pick<Job, "id" | "url" | "source" | "location" | "posted_date">
 
 function stripHtml(html: string): string {
   return html
@@ -36,19 +43,23 @@ function stripHtml(html: string): string {
     .trim()
 }
 
+// The API already returns messages written for the user; only guard against raw dumps.
 function friendlyError(raw: string, fallback: string): string {
-  const text = raw || ""
-  if (/rate.?limit|429|tokens per day|TPD/i.test(text)) {
-    const wait = text.match(/try again in ([\dhms.]+)/i)?.[1]
-    return wait
-      ? `AI is temporarily rate-limited. Try again in ${wait}.`
-      : "AI is temporarily rate-limited. Please try again shortly."
-  }
-  if (/quota|insufficient|billing/i.test(text)) {
-    return "AI quota reached for today. Please try again tomorrow."
-  }
-  if (text.trim().startsWith("{") || text.length > 160) return fallback
-  return text || fallback
+  const text = (raw || "").trim()
+  if (!text || text.startsWith("{") || text.length > 260) return fallback
+  return text
+}
+
+// Errors the user fixes in Settings → AI provider: a rejected key, a key out of quota, a
+// model the key can't use, or the free trial running out.
+class ActionError extends Error {
+  constructor(message: string, readonly needsAISettings: boolean) { super(message) }
+}
+
+async function failFrom(res: Response, fallback: string): Promise<never> {
+  const d = await res.json().catch(() => ({}))
+  const code: string = d.code || ""
+  throw new ActionError(d.error || fallback, code.startsWith("ai_") || code === "hosted_unavailable" || !!d.needs_key)
 }
 
 export default function JobDetailPage() {
@@ -57,20 +68,28 @@ export default function JobDetailPage() {
   const supabase = React.useMemo(() => createClient(), [])
 
   const [match, setMatch]                   = useState<Match | null>(null)
+  const [otherPostings, setOtherPostings]   = useState<OtherPosting[]>([])
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState<string | null>(null)
   const [actionError, setActionError]       = useState<string | null>(null)
+  const [actionNeedsAI, setActionNeedsAI]   = useState(false)
+  const { settings: aiSettings } = useAISettings()
   const [tailoring, setTailoring]           = useState(false)
   const [tailoredResume, setTailoredResume] = useState<ResumeData | null>(null)
   const [appliedLoading, setAppliedLoading] = useState(false)
-  const [interviewQuestions, setInterviewQuestions] = useState<InterviewQuestion[] | null>(null)
   const [generatingInterview, setGeneratingInterview] = useState(false)
+  const [startingProof, setStartingProof]   = useState(false)
   const [openQuestion, setOpenQuestion]     = useState<number | null>(null)
   const [smartApplying, setSmartApplying]   = useState(false)
   const [coverLetter, setCoverLetter]       = useState<string | null>(null)
   const [smartPanelOpen, setSmartPanelOpen] = useState(false)
   const [copied, setCopied]                 = useState<"resume" | "letter" | null>(null)
   const [consentFor, setConsentFor]         = useState<"tailor" | "smart" | null>(null)
+
+  const showError = (err: unknown, fallback: string) => {
+    setActionError(friendlyError(err instanceof Error ? err.message : "", fallback))
+    setActionNeedsAI(err instanceof ActionError && err.needsAISettings)
+  }
 
   const loadJobDetails = useCallback(async () => {
     try {
@@ -106,38 +125,65 @@ export default function JobDetailPage() {
     } finally { setLoading(false) }
   }, [params.id, supabase])
 
-  useEffect(() => { if (params.id) loadJobDetails() }, [params.id, loadJobDetails])
+  useEffect(() => { if (params.id) void Promise.resolve().then(loadJobDetails) }, [params.id, loadJobDetails])
+
+  // The same role posted elsewhere (other cities, recruiters, boards): one job, several links.
+  const dedupeKey = match?.job?.dedupe_key
+  const jobId = match?.job?.id
   useEffect(() => {
-    if (match?.interview_questions?.length) setInterviewQuestions(match.interview_questions)
-  }, [match])
+    if (!dedupeKey || !jobId) return
+    let cancelled = false
+    void supabase.from("jobs").select("id, url, source, location, posted_date")
+      .eq("dedupe_key", dedupeKey).neq("id", jobId)
+      .order("posted_date", { ascending: false }).limit(20)
+      .then(({ data }) => { if (!cancelled) setOtherPostings((data as OtherPosting[]) ?? []) })
+    return () => { cancelled = true }
+  }, [dedupeKey, jobId, supabase])
+
+  // Generating something for an unscored job creates its match row server-side; switch the
+  // page from the placeholder "pending-" id to the real one so later saves hit that row.
+  const adoptMatchId = (id: string | undefined) => {
+    if (id) setMatch((prev) => prev ? { ...prev, id } : null)
+  }
 
   const handleGenerateInterview = async () => {
     if (!match) return
     setGeneratingInterview(true); setActionError(null)
     try {
-      const res = await fetch("/api/interview/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ match_id: match.id, job_id: match.job_id }) })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Failed.") }
+      const res = await apiFetch("/api/interview/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: match.job_id }) })
+      if (!res.ok) await failFrom(res, "Interview generation failed.")
       const data = await res.json()
-      setInterviewQuestions(data.questions)
-      setMatch((prev) => prev ? { ...prev, interview_questions: data.questions, interview_generated_at: new Date().toISOString() } : null)
-    } catch (err: unknown) { setActionError(friendlyError(err instanceof Error ? err.message : "", "Interview generation failed.")) }
+      setMatch((prev) => prev ? { ...prev, id: data.match_id ?? prev.id, interview_questions: data.questions, interview_generated_at: new Date().toISOString() } : null)
+    } catch (err: unknown) { showError(err, "Interview generation failed.") }
     finally { setGeneratingInterview(false) }
+  }
+
+  const handleProveFit = async () => {
+    if (!match) return
+    setStartingProof(true)
+    try {
+      router.push(`/proofs/${await startProof({ job_id: match.job_id })}`)
+    } catch (err: unknown) {
+      showError(err, "Couldn't start the proof.")
+      setStartingProof(false)
+    }
   }
 
   const handleTailorResume = async () => {
     if (!match) return
     setTailoring(true); setActionError(null)
     try {
-      const res = await fetch("/api/resume/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: match.job_id }) })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Failed to tailor resume.") }
+      const res = await apiFetch("/api/resume/tailor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: match.job_id }) })
+      if (!res.ok) await failFrom(res, "Failed to tailor resume.")
       const result = await res.json()
       setTailoredResume(result.resume_json)
-    } catch (err: unknown) { setActionError(friendlyError(err instanceof Error ? err.message : "", "Resume tailoring failed.")) }
+      adoptMatchId(result.match_id)
+    } catch (err: unknown) { showError(err, "Resume tailoring failed.") }
     finally { setTailoring(false) }
   }
 
   const handleSaveResumeEdits = async (updatedResume: ResumeData) => {
-    if (!match) return
+    if (!match || match.id.startsWith("pending-")) return
     try {
       const { error: e } = await supabase.from("matches").update({ tailored_resume_json: updatedResume }).eq("id", match.id)
       if (e) throw e
@@ -149,14 +195,15 @@ export default function JobDetailPage() {
     if (!match) return
     setSmartApplying(true); setActionError(null)
     try {
-      const res = await fetch("/api/apply/smart", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: match.job_id }) })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Smart apply failed.") }
+      const res = await apiFetch("/api/apply/smart", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ job_id: match.job_id }) })
+      if (!res.ok) await failFrom(res, "Smart apply failed.")
       const data = await res.json()
       setTailoredResume(data.tailored_resume)
       setCoverLetter(data.cover_letter)
+      adoptMatchId(data.match_id)
       setSmartPanelOpen(true)
     } catch (err: unknown) {
-      setActionError(friendlyError(err instanceof Error ? err.message : "", "Smart Apply failed. Please try again."))
+      showError(err, "Smart Apply failed. Please try again.")
     } finally { setSmartApplying(false) }
   }
 
@@ -172,31 +219,13 @@ export default function JobDetailPage() {
     if (!match) return
     setAppliedLoading(true); setActionError(null)
     try {
-      if (match.id.startsWith("pending-")) {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error("Not authenticated.")
-        const { data: inserted, error: insertErr } = await supabase
-          .from("matches")
-          .insert({
-            user_id: user.id,
-            job_id: match.job_id,
-            match_score: -1,
-            match_reason: "Manually tracked — not scored by AI.",
-            matched_skills: [],
-            missing_skills: [],
-            status: "applied",
-            applied_at: new Date().toISOString(),
-          })
-          .select()
-          .single()
-        if (insertErr) throw insertErr
-        setMatch((prev) => prev ? { ...prev, ...inserted, job: prev.job } : null)
-      } else {
-        const res = await fetch("/api/apply", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ match_id: match.id }) })
-        if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Failed.") }
-        setMatch((prev) => prev ? { ...prev, status: "applied", applied_at: new Date().toISOString() } : null)
-      }
-    } catch (err: unknown) { setActionError(friendlyError(err instanceof Error ? err.message : "", "Could not record application.")) }
+      // Unscored jobs have no match row yet; the backend creates one when given the job_id.
+      const body = match.id.startsWith("pending-") ? { job_id: match.job_id } : { match_id: match.id }
+      const res = await apiFetch("/api/apply", { method: "POST", body: JSON.stringify(body) })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || "Failed.")
+      setMatch((prev) => prev ? { ...prev, id: d.match_id ?? prev.id, status: "applied", applied_at: new Date().toISOString() } : null)
+    } catch (err: unknown) { showError(err, "Could not record application.") }
     finally { setAppliedLoading(false) }
   }
 
@@ -214,6 +243,12 @@ export default function JobDetailPage() {
   }
 
   const job   = match.job
+  const interviewQuestions: InterviewQuestion[] | null = match.interview_questions?.length ? match.interview_questions : null
+  const ownKey = aiSettings?.mode === "byok" ? aiSettings.key : null
+  const aiWho = ownKey ? `${ownKey.provider_label} using your own key` : "JobAgent's AI service"
+  const costLine = (credits: number) => ownKey
+    ? "It runs on your own key, so it uses no JobAgent credits."
+    : `This uses ${credits} credits from your monthly allowance.`
   const card   = "bg-card border border-border rounded-lg p-4 space-y-3"
 
   return (
@@ -254,11 +289,26 @@ export default function JobDetailPage() {
           </a>
         </div>
       </div>
+      {otherPostings.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-3 text-xs">
+          <span className="text-muted-foreground">Also posted ({otherPostings.length}):</span>
+          {otherPostings.map((p) => (
+            <a key={p.id} href={p.url} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 text-foreground/80 hover:text-foreground underline-offset-2 hover:underline">
+              {SOURCE_LABEL[p.source] ?? p.source}{p.location ? ` · ${p.location}` : ""}
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          ))}
+        </div>
+      )}
       </Reveal>
 
       {actionError && (
         <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-          <span className="flex-1">{actionError}</span>
+          <span className="flex-1">
+            {actionError}
+            {actionNeedsAI && <> <Link href="/settings#ai" className="underline font-medium">Open AI settings</Link></>}
+          </span>
           <button onClick={() => setActionError(null)} className="text-red-400 hover:text-red-700 shrink-0">✕</button>
         </div>
       )}
@@ -346,6 +396,18 @@ export default function JobDetailPage() {
           </div>
 
           <div className={card}>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><BadgeCheck className="w-3 h-3" /> Proof of Fit</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Answer 3 timed questions about this role. Get a skill-by-skill report with quotes from your answers, and a link to put in your application.
+            </p>
+            <button onClick={handleProveFit} disabled={startingProof}
+              className="w-full border border-border text-foreground text-xs font-medium py-2 rounded-md hover:border-foreground/40 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
+              {startingProof && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              {startingProof ? "Preparing questions…" : "Prove your fit · about 15 min"}
+            </button>
+          </div>
+
+          <div className={card}>
             <div className="flex items-center justify-between">
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Interview prep</p>
               {interviewQuestions && <span className="text-[9px] text-muted-foreground">{interviewQuestions.length} questions</span>}
@@ -356,7 +418,7 @@ export default function JobDetailPage() {
                 <button onClick={handleGenerateInterview} disabled={generatingInterview}
                   className="w-full bg-primary text-primary-foreground text-xs font-medium py-2 rounded-md hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors">
                   {generatingInterview && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {generatingInterview ? "Generating..." : "Generate questions"}
+                  {generatingInterview ? "Generating..." : ownKey ? "Generate questions" : `Generate questions · ${CREDIT_COST.interview} credits`}
                 </button>
               </div>
             ) : (
@@ -404,7 +466,7 @@ export default function JobDetailPage() {
                 ))}
                 <button onClick={handleGenerateInterview} disabled={generatingInterview}
                   className="w-full mt-1 text-[10px] text-muted-foreground hover:text-foreground/90 flex items-center justify-center gap-1 transition-colors">
-                  {generatingInterview && <Loader2 className="w-3 h-3 animate-spin" />} Regenerate
+                  {generatingInterview && <Loader2 className="w-3 h-3 animate-spin" />} Regenerate{ownKey ? "" : ` · ${CREDIT_COST.interview} credits`}
                 </button>
               </div>
             )}
@@ -506,12 +568,12 @@ export default function JobDetailPage() {
         open={consentFor !== null}
         title={consentFor === "smart" ? "Run Smart Apply?" : "Tailor your resume with AI?"}
         points={consentFor === "smart" ? [
-          "Your resume and this job's description will be processed by our AI service to generate a tailored resume and a personalized cover letter.",
-          `This uses ${CREDIT_COST.smart_apply} credits from your monthly allowance.`,
+          `Your resume and this job's description will be processed by ${aiWho} to generate a tailored resume and a personalized cover letter.`,
+          costLine(CREDIT_COST.smart_apply),
           "AI output can contain mistakes — review both documents before applying.",
         ] : [
-          "Your resume and this job's description will be processed by our AI service to generate a tailored version.",
-          `This uses ${CREDIT_COST.tailor} credits from your monthly allowance.`,
+          `Your resume and this job's description will be processed by ${aiWho} to generate a tailored version.`,
+          costLine(CREDIT_COST.tailor),
           "AI output can contain mistakes — review the result before sending it to an employer.",
         ]}
         confirmLabel="I agree — continue"

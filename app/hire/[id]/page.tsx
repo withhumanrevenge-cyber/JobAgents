@@ -6,8 +6,10 @@ import Link from "next/link"
 import { Loader2, ArrowLeft, Sparkles, Mail, ExternalLink, Users, SlidersHorizontal } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { MatchScoreBadge } from "@/components/jobs/MatchScoreBadge"
+import { CandidateProof } from "@/components/proofs/CandidateProof"
 import { JOB_TYPE_LABEL, EXPERIENCE_LABEL } from "@/lib/status"
 import type { JobPosting, CandidateMatch, CandidateStatus, JobType, ExperienceLevel } from "@/types"
+import { apiFetch } from "@/lib/api"
 
 const STATUS_OPTIONS: CandidateStatus[] = ["new", "shortlisted", "contacted", "rejected"]
 
@@ -25,7 +27,7 @@ export default function PostingDetailPage() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/hire/postings/${id}/candidates`)
+    const res = await apiFetch(`/api/hire/postings/${id}/candidates`)
     const data = await res.json()
     if (!data.error) {
       setPosting(data.posting)
@@ -35,7 +37,7 @@ export default function PostingDetailPage() {
     setLoading(false)
   }, [id])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { void Promise.resolve().then(load) }, [load])
 
   const setThreshold = (value: number) => {
     setMinScore(value)
@@ -49,7 +51,7 @@ export default function PostingDetailPage() {
   const findCandidates = async () => {
     setScanning(true); setError(null)
     try {
-      const res = await fetch(`/api/hire/postings/${id}/candidates`, { method: "POST" })
+      const res = await apiFetch(`/api/hire/postings/${id}/candidates`, { method: "POST" })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Scan failed.")
       await load()
@@ -60,7 +62,7 @@ export default function PostingDetailPage() {
 
   const setStatus = async (matchId: string, status: CandidateStatus) => {
     setCandidates((prev) => prev.map((c) => (c.id === matchId ? { ...c, status } : c)))
-    await fetch(`/api/hire/candidates/${matchId}`, {
+    await apiFetch(`/api/hire/candidates/${matchId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -167,7 +169,12 @@ export default function PostingDetailPage() {
                 </div>
               </div>
 
+              <CandidateProof match={c} onChange={load} />
+
               <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/60">
+                {!c.candidate?.email && !c.candidate?.linkedin_url && (
+                  <p className="text-[11px] text-muted-foreground">Contact details are shared once you advance them and they accept.</p>
+                )}
                 {c.candidate?.email && (
                   <a href={`mailto:${c.candidate.email}`} className="inline-flex items-center gap-1.5 text-xs text-foreground/80 hover:text-foreground transition-colors">
                     <Mail className="w-3.5 h-3.5" /> {c.candidate.email}
